@@ -1,0 +1,9 @@
+out/*
+!out/results.csv
+**/build/
+**/.gradle/
+*.apk
+shells/migo-shell/app/libs/*.aar
+node_modules/
+*.log
+.DS_Store
