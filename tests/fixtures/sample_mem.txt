@@ -1,0 +1,4 @@
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           TOTAL PSS:   117661            TOTAL RSS:   205272       TOTAL SWAP PSS:      237
