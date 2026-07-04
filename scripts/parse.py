@@ -90,7 +90,8 @@ def main():
         "fps_median": fps_median,
         "fps_1pct_low": fps_low,
     }
-    print(",".join(row[c] for c in COLUMNS))
+    # Sanitize: no value may contain a comma (would break the CSV column count).
+    print(",".join(str(row[c]).replace(",", ";") for c in COLUMNS))
 
 
 if __name__ == "__main__":
