@@ -1,0 +1,3 @@
+label,runtime,game,device_model,device_brand,android_release,android_sdk,webview_version,migo_version,harness_version,timestamp,fps_source,cold_start_ms,pss_peak_kb,fps_median,fps_1pct_low
+bunnymark_webview,webview,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-04T18:14:05Z,game-telemetry,384,212191,60,60
+bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:ff29aa4,1.0.0,2026-07-04T18:15:50Z,game-telemetry,460,120621,60,58

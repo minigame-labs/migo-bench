@@ -5,7 +5,7 @@
 #   run.sh --runtime webview|migo --game bunnymark --device SERIAL \
 #          [--scenario steady] [--duration 60] [--cold-runs 3] \
 #          [--migo-aar local:PATH|release-tag:TAG|sha:SHA]   (required for migo)
-set -euo pipefail
+set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RUNTIME=""; GAME=bunnymark; DEVICE=""; SCEN=steady; DUR=60; COLD=3; MIGO_AAR=""

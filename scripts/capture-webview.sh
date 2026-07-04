@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Capture the WebView shell: build+install, system cold-start, steady fps+mem+provenance.
-set -euo pipefail
+set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib.sh"
 
@@ -23,5 +23,6 @@ echo "cold_start_ms=$(cold_start_ms "$PKG" "$ACT" "$ACT" "$COLD")" >> "${pfx}_me
 "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
 "${ADB[@]}" shell am start -n "$PKG/$ACT" >/dev/null 2>&1; sleep 5
 capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"   # writes ${pfx}_fps.txt + fps_source=...
-capture_mem "$PKG" "${pfx}_mem.txt"
+# Fair PSS: main process + chromium sandboxed renderer (dumpsys meminfo <pkg> omits the renderer).
+"${ADB[@]}" shell dumpsys meminfo 2>/dev/null | tr -d '\r' | python3 "$DIR/webview_pss.py" "$PKG" > "${pfx}_mem.txt"
 echo "[webview] captured: $(grep -E 'cold_start_ms|fps_source' "${pfx}_meta.txt" | tr '\n' ' ')"

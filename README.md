@@ -49,7 +49,26 @@ tests/       parse.py fixture tests
 
 ## Reproduction runbook
 
-_(Filled once Milestone 1's `run.sh` reproduces the seed data point — see the plan.)_
+```bash
+export PATH=$PATH:$ANDROID_HOME/platform-tools           # adb
+python3 scripts/parse.py --header-only > out/results.csv
+# WebView baseline:
+bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3
+# Migo (pin a version: local dev AAR, a release tag, or a git sha):
+bash scripts/run.sh --runtime migo --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 \
+     --migo-aar local:$HOME/wkspace/migo/platforms/android/dist/migo-debug.aar
+column -t -s, out/results.csv
+```
+
+### Milestone-1 result — bunnymark, 100 sprites, Huawei Mate30 Pro (Kirin 990, Android 12 / API 31)
+
+| metric | WebView | Migo | read |
+|---|---|---|---|
+| **PSS memory** | **~207 MB** | **~118 MB** | **Migo ~43% less.** WebView renders in a *separate* chromium sandboxed process; the harness sums it (main + renderer) — counting only the main process would unfairly undercount WebView by ~100 MB. Migo is single-process. |
+| fps (median / 1% low) | 60 / 60 | 60 / 58 | tie (as expected — never the headline) |
+| cold-start (system `Displayed`, ms) | 384 | 460 | **WebView faster here** — its system Chromium is pre-warmed/shared; Migo cold-starts its whole runtime (V8 + GL + game). Honest; the low-end tier is where the thesis is tested. |
+
+Notes: `fps_source=game-telemetry` on this device — EMUI restricts `dumpsys SurfaceFlinger --latency` (all-zeros), so fps falls back to the game's own counter for BOTH runtimes (symmetric); non-Huawei devices will use SurfaceFlinger. Migo pinned to `migo@ff29aa4`. High-end device → memory is the clear win; cold-start/fps modest — the low-end tier (GTM wedge) is the next test.
 
 ## Migo version pinning
 

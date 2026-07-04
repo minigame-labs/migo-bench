@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Capture the Migo shell: build+install (AAR already staged at app/libs/migo.aar
 # by run.sh), system cold-start (Displayed for BenchGameActivity), steady fps+mem.
-set -euo pipefail
+set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib.sh"
 
