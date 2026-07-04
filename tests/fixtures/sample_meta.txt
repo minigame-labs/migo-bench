@@ -1,0 +1,8 @@
+device_model=TAS-AN00
+device_brand=HUAWEI
+android_release=10
+android_sdk=31
+webview_version=com.huawei.webview
+harness_version=1.0.0
+timestamp=2026-07-05T00:00:00Z
+app_version=1.0.0
