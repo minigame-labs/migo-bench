@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Bare WebView baseline for Migo benchmarks. No INTERNET permission: the
+      game is loaded from file:///android_asset, so the comparison stays on a
+      fully offline, self-contained payload (identical to how Migo runs it).
+    -->
+
+    <application
+        android:label="Migo WebView Baseline"
+        android:hardwareAccelerated="true"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".WebViewBenchActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

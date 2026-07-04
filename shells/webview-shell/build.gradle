@@ -1,0 +1,25 @@
+// Modern Android System WebView baseline shell for Migo benchmarks.
+//
+// This is the *correct* WebView baseline: compileSdk 34 / minSdk 26, matching
+// the Migo library project (platforms/android/library). Older WebView shells
+// (compileSdk 23, the 2013-2016 GitHub templates) make Migo win unfairly --
+// a buyer who tests on a modern device sees through inflated numbers. Keep
+// this shell's config in lockstep with the Migo sample so the only variable
+// measured is "WebView vs Migo", not "old Android vs new".
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.2'
+    }
+}
+
+plugins {
+    id 'com.android.application' version '8.1.2' apply false
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

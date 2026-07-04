@@ -1,0 +1,10 @@
+# Packed game payloads are reproducible via bench/scripts/pack-game.sh from the
+# opensource game clones — do not commit them. Keep only the placeholder.
+/app/src/main/assets/game/*
+!/app/src/main/assets/game/index.html
+
+# Gradle build outputs
+/.gradle/
+/build/
+/app/build/
+/local.properties
