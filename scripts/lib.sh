@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared helpers for the migo-bench harness: adb wiring, provenance, and the
 # layered (system-level -> game-telemetry) fps capture.
-set -euo pipefail
+set -eu
 
 HARNESS_VERSION="1.0.0"
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

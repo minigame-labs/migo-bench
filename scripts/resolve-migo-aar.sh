@@ -4,7 +4,7 @@
 #        | release-tag:TAG   gh release download from minigame-labs/migo
 #        | sha:SHA           checkout that migo commit + build-aar.sh
 # Writes <dest.aar> and prints the resolved migo_version to stdout.
-set -euo pipefail
+set -eu
 spec="${1:?usage: resolve-migo-aar.sh <spec> <dest.aar>}"
 dest="${2:?usage: resolve-migo-aar.sh <spec> <dest.aar>}"
 mkdir -p "$(dirname "$dest")"
