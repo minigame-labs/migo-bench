@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.migo.bench.webview'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.migo.bench.webview"
+        // Match the Migo library (platforms/android/library/build.gradle) so
+        // the WebView baseline and Migo run on the same Android API floor.
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    buildTypes {
+        // The benchmark uses the release build: a debuggable WebView app
+        // carries extra overhead that would flatter Migo. Release with
+        // minify off keeps the comparison about the runtime, not R8.
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    sourceSets {
+        main {
+            // bench/scripts/pack-game.sh copies a single game's static output
+            // (index.html + assets) into src/main/assets/game/ before build.
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+}
+
+dependencies {
+    // Intentionally zero AndroidX / support libraries. The shell is a bare
+    // Activity + WebView so the baseline measures the platform WebView, not
+    // an app framework layered on top.
+}
