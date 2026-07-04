@@ -66,3 +66,26 @@ capture_fps() {
 
 # capture_mem <pkg> <out_file>  -> dumpsys meminfo
 capture_mem() { "${ADB[@]}" shell dumpsys meminfo "$1" > "$2" 2>/dev/null || true; }
+
+# cold_start_ms <pkg> <launch_activity> <displayed_activity> <runs>
+#   Cold launches <runs> times; each reads ActivityManager's system-level
+#   "Displayed <pkg>/<displayed_activity>: +Nms" (launch -> first surface frame).
+#   For migo, launch=.LauncherActivity but the displayed activity is .BenchGameActivity
+#   (the launcher forwards + finishes). Prints the median ms.
+cold_start_ms() {
+  local pkg="$1" launch="$2" disp="$3" runs="$4" i ms vals=()
+  for ((i=0; i<runs; i++)); do
+    "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+    "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
+    sleep 2
+    "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
+    "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
+    sleep 6
+    ms=$("${ADB[@]}" logcat -d 2>/dev/null \
+        | grep -oE "Displayed ${pkg}/${disp}: \+[0-9]+ms" | head -1 \
+        | grep -oE '\+[0-9]+ms' | grep -oE '[0-9]+')
+    [ -n "$ms" ] && vals+=("$ms")
+    "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  done
+  printf '%s\n' "${vals[@]}" | sort -n | awk '{a[NR]=$1} END{if(NR)print a[int((NR+1)/2)]}'
+}
