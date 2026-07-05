@@ -36824,7 +36824,7 @@ ${parts.join("\n")}
     if (canvas.addEventListener) {
       canvas.addEventListener("mousedown", () => addBunnies(TAP_ADD));
     }
-    addBunnies(START_COUNT);
+    addBunnies(START_COUNT);;(function(){var d=false;app.ticker.add(function(){if(d)return;d=true;try{if(typeof AndroidBench!=="undefined"&&AndroidBench.ready)AndroidBench.ready();}catch(e){}});})();
     function nowMs() {
       return globalThis.performance && performance.now ? performance.now() : Date.now();
     }

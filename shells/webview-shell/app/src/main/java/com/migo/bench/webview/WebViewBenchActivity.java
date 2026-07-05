@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
@@ -65,6 +66,11 @@ public class WebViewBenchActivity extends Activity {
         // Keep navigation inside the WebView; never spawn a browser.
         webView.setWebViewClient(new WebViewClient());
 
+        // Bridge so the game signals its first real frame -> reportFullyDrawn(),
+        // giving WebView the same system "game-ready" cold-start metric as Migo's
+        // onGameReady (the fair startup number; "Displayed" fires on the blank window).
+        webView.addJavascriptInterface(new BenchBridge(), "AndroidBench");
+
         // Layer type HARDWARE: ensure the WebView composites on the GPU so
         // dumpsys gfxinfo sees real frame timing (matches Migo's GPU path).
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -100,5 +106,20 @@ public class WebViewBenchActivity extends Activity {
             webView = null;
         }
         super.onDestroy();
+    }
+
+    /** JS-callable bridge: the game calls AndroidBench.ready() on its first frame. */
+    private final class BenchBridge {
+        private boolean reported = false;
+
+        @JavascriptInterface
+        public void ready() {
+            runOnUiThread(() -> {
+                if (!reported) {
+                    reported = true;
+                    reportFullyDrawn();
+                }
+            });
+        }
     }
 }
