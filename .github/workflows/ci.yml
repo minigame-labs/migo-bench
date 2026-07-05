@@ -18,6 +18,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install test deps
+        run: pip install pytest
+
       - name: Bash syntax check (all harness scripts)
         run: for f in scripts/*.sh; do echo "bash -n $f"; bash -n "$f"; done
 
