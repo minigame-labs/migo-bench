@@ -10,6 +10,12 @@ ADB_BIN="${ADB_BIN:-/home/xg/Android/Sdk/platform-tools/adb}"
 SERIAL="${SERIAL:-}"
 ADB=("$ADB_BIN"); [[ -n "$SERIAL" ]] && ADB=("$ADB_BIN" -s "$SERIAL")
 
+# Which bundled game asset dir the shells should load (default "game" = bunnymark).
+# A second game (e.g. endless-runner) sets GAME_ASSET=game-endless-runner; every
+# launch below threads it in via --es game_asset. Empty = shell's built-in default.
+GAME_ASSET="${GAME_ASSET:-}"
+_asset_extra() { [ -n "$GAME_ASSET" ] && printf -- '--es game_asset %s' "$GAME_ASSET" || true; }
+
 require_one_device() {
   command -v "$ADB_BIN" >/dev/null 2>&1 || { echo "ERROR: adb not found at $ADB_BIN" >&2; exit 2; }
   if [[ -z "$SERIAL" ]]; then
@@ -106,7 +112,7 @@ game_ready_ms() {
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2; "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
-    "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
+    "${ADB[@]}" shell am start -n "$pkg/$launch" $(_asset_extra) >/dev/null 2>&1
     sleep 8
     tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Fully drawn ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
     [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
@@ -128,7 +134,7 @@ cold_start_ms() {
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2
     "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
-    "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
+    "${ADB[@]}" shell am start -n "$pkg/$launch" $(_asset_extra) >/dev/null 2>&1
     sleep 8
     tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Displayed ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
     [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
