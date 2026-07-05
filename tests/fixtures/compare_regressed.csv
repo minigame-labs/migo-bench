@@ -1,0 +1,2 @@
+game,runtime,first_frame_ms,game_ready_ms,cpu_pct,pss_peak_kb,fps_median,fps_1pct_low
+bunnymark,migo,470,520,49,204800,52,50

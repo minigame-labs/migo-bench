@@ -7,10 +7,10 @@
 
 同一游戏、同一设备、同一交互,在 **Migo 原生运行时** 与 **Android 系统 WebView** 上对比。定位:Migo = 开源原生的 WebView 替代。**头条是一致性 + 可审计 + 内存/CPU 效率;帧率通常打平,从不夸大。**
 
-- ✅ **内存:Migo 明显更省**(~150MB vs WebView ~222MB,**少约 33%**)——关键:WebView 的渲染跑在**独立的 chromium 进程**里,必须把它算进去才公平(否则少算 ~100MB)。
+- ✅ **内存:Migo 明显更省**(~147MB vs WebView ~222MB,**少约 34%**)——关键:WebView 的渲染跑在**独立的 chromium 进程**里,必须把它算进去才公平(否则少算 ~100MB)。
 - ✅ **CPU:Migo 约为 WebView 的一半**(~47% vs ~120%,同样 100 精灵 60fps)——原生 GL 比 Chromium 合成器更省 CPU;这也是功耗的代理指标。
 - ✅ **重载吞吐:Migo 明显更强**——精灵数拉到 4 万以上两侧分化,10 万精灵 Migo 32fps vs WebView 17fps(**~1.9×**)。
-- ✅ **启动抗压:热机下 Migo 更快**——凉机游戏就绪基本持平(525 vs 537ms),但连续跑热/降频后 Migo 506ms vs WebView 1242ms(**~2.4×**),WebView 的 Chromium 冷启动被降频严重放大。
+- ✅ **启动抗压:热机下 Migo 更快**——凉机游戏就绪基本持平(506 vs 528ms),但连续跑热/降频后 Migo 506ms vs WebView 1242ms(**~2.4×**),WebView 的 Chromium 冷启动被降频严重放大。
 - = **帧率(常规负载):打平**(都 ~60fps)。
 - ✅✅ **游戏越重,差距越大**——换成真实的 Phaser 游戏 endless-runner,内存差从 33% 拉大到 **61%**、CPU 从 ~2.6× 拉大到 **~7×**(Migo 原生开销近乎固定,WebView 的 Chromium 税随应用增长)。见 §3.6。
 
@@ -33,7 +33,7 @@
 
 | 指标 | WebView | Migo | 差异 |
 |---|---|---|---|
-| PSS 峰值 | **~222 MB** | **~150 MB** | **Migo 少 ~33%** |
+| PSS 峰值 | **~222 MB** | **~147 MB** | **Migo 少 ~34%** |
 
 - **公平口径**:WebView = 主进程 + chromium 沙箱渲染进程之和(`dumpsys meminfo <pkg>` 只算主进程,会漏掉渲染进程约 100MB)。Migo 是**单进程**,全部计入。
 - PSS 有 ±几十 MB 抖动(GC/系统状态);多轮平均会更稳,方向(Migo 明显更省)稳健。
@@ -44,7 +44,7 @@
 
 | 设备状态 | WebView | Migo | |
 |---|---|---|---|
-| **凉机(fresh)** | 537 ms | 525 ms | ≈ 持平,Migo 略快 |
+| **凉机(fresh)** | 528 ms | 506 ms | ≈ 持平,Migo 略快 |
 | **热机/降频(连续跑数小时后)** | **1242 ms** | **506 ms** | **Migo ~2.4× 快** |
 
 - 凉机基本持平(V8 快照抵消原生初始化)。**热机下 WebView 的 Chromium 冷启动(进程拉起 + 页面加载 + JS 初始化,CPU 密集)被降频严重放大,而 Migo 的快照恢复几乎不受影响**——热机/降频正是**低端机 + 长时间游玩**的常态,这是对 Migo 有利的真实场景。
@@ -101,12 +101,12 @@
 
 | 指标 | bunnymark(轻,合成) | **endless-runner(重,真实 Phaser)** |
 |---|---|---|
-| 内存(Migo vs WebView) | 150 vs 222 MB → 少 33% | **146 vs 378 MB → 少 61%** |
-| CPU | 47% vs 120% → ~2.6× | **18% vs 125% → ~7×** |
-| 游戏就绪 | 525 vs 537 → 持平 | 631 vs 654 → 持平 |
+| 内存(Migo vs WebView) | 147 vs 222 MB → 少 34% | **146 vs 378 MB → 少 61%** |
+| CPU | 46% vs 122% → ~2.6× | **18% vs 125% → ~7×** |
+| 游戏就绪 | 506 vs 528 → 持平 | 631 vs 654 → 持平 |
 | fps | 60 / 60 | 60 / 60 |
 
-**结论**:换成更重的真实游戏,Migo 的领先**不是缩小而是拉大**。原因:**Migo 原生运行时的开销近乎与游戏无关**(146MB ≈ bunnymark 的 150MB;CPU 甚至更低,因为这游戏动的对象比 100 只兔子少),是一层**固定的低底噪**;而 **WebView 的 Chromium 税随应用变重而增长**(内存 222→378MB,CPU 高位不降)。也就是说 —— **游戏越真实、越重,Migo 的优势越明显**,这正是真实小游戏(而非玩具基准)所处的区间。
+**结论**:换成更重的真实游戏,Migo 的领先**不是缩小而是拉大**。原因:**Migo 原生运行时的开销近乎与游戏无关**(146MB ≈ bunnymark 的 147MB;CPU 甚至更低,因为这游戏动的对象比 100 只兔子少),是一层**固定的低底噪**;而 **WebView 的 Chromium 税随应用变重而增长**(内存 222→378MB,CPU 高位不降)。也就是说 —— **游戏越真实、越重,Migo 的优势越明显**,这正是真实小游戏(而非玩具基准)所处的区间。
 
 > 单轮采样(与 bunnymark 的 CPU/内存同口径),方向差距极大、稳健;绝对值多轮平均会更稳。endless-runner 的 fps 遥测用的是**引擎无关的 rAF 计数器**(两侧注入完全相同的代码,`[endless-runner] fps=N`),WebView 的"游戏就绪"由注入的 `AndroidBench.ready()` 首帧回调触发、Migo 由原生 onGameReady 触发 —— 这就是新游戏接入本框架要满足的**遥测契约**。
 
@@ -132,4 +132,10 @@ bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --durat
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 48 --migo-aar local:...
 ```
 
-Migo 版本可 pin:`--migo-aar local:PATH | release-tag:TAG | sha:SHA`——每个结果都钉在一个确切的 Migo 版本上(可审计)。
+```bash
+# 对比 / 回归门(Migo vs WebView 表 · 或新 Migo vs 基线):
+python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+python3 scripts/compare.py --results out/results.csv --baseline baselines/mate30.csv --game bunnymark
+```
+
+Migo 版本可 pin:`--migo-aar local:PATH | release-tag:TAG | sha:SHA`——每个结果都钉在一个确切的 Migo 版本上(可审计)。基线快照在 `baselines/`,将来任何 Migo 优化重跑一遍即可 diff 出变好/变差(见 README「Regression workflow」)。

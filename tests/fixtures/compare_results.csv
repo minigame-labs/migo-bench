@@ -1,0 +1,3 @@
+game,runtime,first_frame_ms,game_ready_ms,cpu_pct,pss_peak_kb,fps_median,fps_1pct_low
+bunnymark,webview,1132,1242,123,227328,60,60
+bunnymark,migo,444,506,47,153600,59,58

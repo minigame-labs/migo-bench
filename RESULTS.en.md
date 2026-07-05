@@ -7,10 +7,10 @@
 
 Same game, same device, same interaction, on the **Migo native runtime** vs the **Android System WebView**. Positioning: Migo = an open-source native WebView replacement. **The headline is consistency + auditability + memory/CPU efficiency; fps ties at normal load and is never oversold.**
 
-- ✅ **Memory: Migo clearly lighter** (~150 MB vs WebView ~222 MB, **~33% less**). The catch: WebView renders in a **separate chromium process** that must be counted for fairness (otherwise WebView is undercounted by ~100 MB).
+- ✅ **Memory: Migo clearly lighter** (~147 MB vs WebView ~222 MB, **~34% less**). The catch: WebView renders in a **separate chromium process** that must be counted for fairness (otherwise WebView is undercounted by ~100 MB).
 - ✅ **CPU: Migo about half of WebView** (~47% vs ~120%, same 100 sprites at 60 fps) — native GL is lighter than Chromium's compositor; also the energy proxy.
 - ✅ **Throughput under heavy load: Migo clearly stronger** — the two diverge past 40k sprites; at 100k Migo 32 fps vs WebView 17 fps (**~1.9×**).
-- ✅ **Startup resilience under heat: Migo faster** — game-ready is ~par on a cool device (525 vs 537 ms), but after sustained load / throttling Migo 506 ms vs WebView 1242 ms (**~2.4×**); WebView's Chromium cold start is amplified badly by throttling.
+- ✅ **Startup resilience under heat: Migo faster** — game-ready is ~par on a cool device (506 vs 528 ms), but after sustained load / throttling Migo 506 ms vs WebView 1242 ms (**~2.4×**); WebView's Chromium cold start is amplified badly by throttling.
 - = **fps (normal load): tie** (both ~60).
 - ✅✅ **The heavier the game, the bigger the gap** — swapping in the real Phaser game endless-runner widens the memory gap from 33% to **61%** and CPU from ~2.6× to **~7×** (Migo's native cost is nearly fixed; WebView's Chromium tax grows with the app). See §3.6.
 
@@ -33,7 +33,7 @@ Same game, same device, same interaction, on the **Migo native runtime** vs the 
 
 | metric | WebView | Migo | delta |
 |---|---|---|---|
-| PSS peak | **~222 MB** | **~150 MB** | **Migo ~33% less** |
+| PSS peak | **~222 MB** | **~147 MB** | **Migo ~34% less** |
 
 - **Fair accounting**: WebView = main process + chromium sandboxed renderer (`dumpsys meminfo <pkg>` counts only the main process, missing ~100 MB of renderer). Migo is **single-process**, fully counted.
 - PSS has ±tens-of-MB jitter (GC / system state); the direction (Migo clearly lighter) is robust across runs.
@@ -44,7 +44,7 @@ Same game, same device, same interaction, on the **Migo native runtime** vs the 
 
 | device state | WebView | Migo | |
 |---|---|---|---|
-| **cool (fresh)** | 537 ms | 525 ms | ≈ par, Migo slightly faster |
+| **cool (fresh)** | 528 ms | 506 ms | ≈ par, Migo slightly faster |
 | **hot / throttled (after hours of runs)** | **1242 ms** | **506 ms** | **Migo ~2.4× faster** |
 
 - Cool: ~par (the V8 snapshot offsets native init). **Under heat, WebView's Chromium cold start (process spin-up + page load + JS init, CPU-heavy) is amplified badly by throttling, while Migo's snapshot restore is barely affected** — heat/throttling is exactly the **low-end + sustained-play** condition, a realistic Migo-favorable scenario.
@@ -95,12 +95,12 @@ The second game is a full webpack build of the **Phaser 3** engine (a real mini-
 
 | metric | bunnymark (light, synthetic) | **endless-runner (heavy, real Phaser)** |
 |---|---|---|
-| memory (Migo vs WebView) | 150 vs 222 MB → 33% less | **146 vs 378 MB → 61% less** |
-| CPU | 47% vs 120% → ~2.6× | **18% vs 125% → ~7×** |
-| game-ready | 525 vs 537 → par | 631 vs 654 → par |
+| memory (Migo vs WebView) | 147 vs 222 MB → 34% less | **146 vs 378 MB → 61% less** |
+| CPU | 46% vs 122% → ~2.6× | **18% vs 125% → ~7×** |
+| game-ready | 506 vs 528 → par | 631 vs 654 → par |
 | fps | 60 / 60 | 60 / 60 |
 
-**Takeaway**: with a heavier, real game Migo's lead **widens rather than shrinks**. Why: **Migo's native runtime cost is nearly game-independent** (146 MB ≈ bunnymark's 150 MB; CPU is even lower here since this game animates fewer objects than 100 bunnies) — a **fixed, low noise floor** — while **WebView's Chromium tax grows with the app** (memory 222→378 MB, CPU stays high). In other words, **the more real and heavy the game, the clearer Migo's advantage** — and real mini-games live in that region, not in toy benchmarks.
+**Takeaway**: with a heavier, real game Migo's lead **widens rather than shrinks**. Why: **Migo's native runtime cost is nearly game-independent** (146 MB ≈ bunnymark's 147 MB; CPU is even lower here since this game animates fewer objects than 100 bunnies) — a **fixed, low noise floor** — while **WebView's Chromium tax grows with the app** (memory 222→378 MB, CPU stays high). In other words, **the more real and heavy the game, the clearer Migo's advantage** — and real mini-games live in that region, not in toy benchmarks.
 
 > Single-run sample (same basis as bunnymark's CPU/memory); the direction is large and robust, absolute values would tighten with multi-run averaging. endless-runner's fps telemetry uses an **engine-agnostic rAF counter** (identical injected code both sides, `[endless-runner] fps=N`); WebView game-ready fires from an injected `AndroidBench.ready()` first-frame callback, Migo from native onGameReady — this is the **telemetry contract** a new game satisfies to plug into the framework.
 
@@ -126,4 +126,10 @@ bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --durat
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
 ```
 
-Pin the Migo version with `--migo-aar local:PATH | release-tag:TAG | sha:SHA` — every result is tied to an exact Migo version (auditability).
+```bash
+# compare / regression gate (Migo vs WebView table, or new Migo vs baseline):
+python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+python3 scripts/compare.py --results out/results.csv --baseline baselines/mate30.csv --game bunnymark
+```
+
+Pin the Migo version with `--migo-aar local:PATH | release-tag:TAG | sha:SHA` — every result is tied to an exact Migo version (auditability). Baseline snapshots live in `baselines/`; any future Migo optimization re-runs the capture and diffs good/bad against them (see README "Regression workflow").
