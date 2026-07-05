@@ -11,3 +11,6 @@ node_modules/
 games/bunnymark-stress/*.js
 games/bunnymark-stress/index.html
 shells/*/app/src/main/assets/game-stress/*.js
+__pycache__/
+*.pyc
+.pytest_cache/
