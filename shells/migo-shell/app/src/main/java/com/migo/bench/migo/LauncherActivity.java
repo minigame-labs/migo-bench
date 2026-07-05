@@ -26,7 +26,12 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        deployGame();
+        // Which bundled game asset dir to deploy (default "game"; "game-stress" for the ramp curve).
+        String asset = getIntent().getStringExtra("game_asset");
+        if (asset == null || asset.trim().isEmpty()) {
+            asset = "game";
+        }
+        deployGame(asset);
         RuntimeConfig cfg = new RuntimeConfig.Builder(this)
                 .setDebugEnabled(true)
                 .setCodeSigningEnabled(false)
@@ -35,16 +40,16 @@ public class LauncherActivity extends Activity {
         finish();
     }
 
-    // Copy assets/game/{game.js,game.json} -> filesDir/migo/games/bench/code/.
-    private void deployGame() {
+    // Copy assets/<asset>/{game.js,game.json} -> filesDir/migo/games/bench/code/.
+    private void deployGame(String asset) {
         File code = new File(getFilesDir(), "migo/games/" + GAME_ID + "/code");
         if (!code.exists() && !code.mkdirs()) {
             Log.e(TAG, "could not create code dir " + code);
             return;
         }
-        copyAsset("game/game.js", new File(code, "game.js"));
-        copyAsset("game/game.json", new File(code, "game.json"));
-        Log.i(TAG, "deployed game -> " + code.getAbsolutePath());
+        copyAsset(asset + "/game.js", new File(code, "game.js"));
+        copyAsset(asset + "/game.json", new File(code, "game.json"));
+        Log.i(TAG, "deployed game '" + asset + "' -> " + code.getAbsolutePath());
     }
 
     private void copyAsset(String assetPath, File dest) {

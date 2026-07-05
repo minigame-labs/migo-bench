@@ -16,6 +16,11 @@ require_one_device() {
     local n; n=$("${ADB[@]}" devices | grep -cw device || true)
     [[ "$n" -eq 1 ]] || { echo "ERROR: need exactly 1 device or SERIAL=; found $n" >&2; "${ADB[@]}" devices >&2; exit 2; }
   fi
+  # Keep the screen on for the whole capture — a slept/locked screen stops the
+  # game activity (top=false) and yields ZERO frames/telemetry.
+  "${ADB[@]}" shell svc power stayon true >/dev/null 2>&1 || true
+  "${ADB[@]}" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+  "${ADB[@]}" shell wm dismiss-keyguard >/dev/null 2>&1 || true
 }
 
 adbsh() { "${ADB[@]}" shell "$@"; }
@@ -88,4 +93,18 @@ cold_start_ms() {
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
   done
   printf '%s\n' "${vals[@]}" | sort -n | awk '{a[NR]=$1} END{if(NR)print a[int((NR+1)/2)]}'
+}
+
+# capture_stress <pkg> <launch_activity> <duration_sec> <out_file>
+#   Launches the game with game_asset=game-stress (deterministic in-game sprite
+#   ramp, identical both sides), captures the `bunnies=N fps=M` telemetry stream.
+#   Ramp = 500,1k,2k,3k,5k,8k,12k,20k @ 5s each (~40s) -> use duration >= 50.
+capture_stress() {
+  local pkg="$1" act="$2" dur="$3" outf="$4"
+  "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  sleep 2
+  "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
+  "${ADB[@]}" shell am start -n "$pkg/$act" --es game_asset game-stress >/dev/null 2>&1
+  sleep "$dur"
+  "${ADB[@]}" logcat -d 2>/dev/null | grep -oE 'bunnies=[0-9]+ fps=[0-9]+' > "$outf" || true
 }

@@ -68,6 +68,18 @@ column -t -s, out/results.csv
 | fps (median / 1% low) | 60 / 60 | 60 / 58 | tie (as expected — never the headline) |
 | cold-start (system `Displayed`, ms) | 384 | 460 | **WebView faster here** — its system Chromium is pre-warmed/shared; Migo cold-starts its whole runtime (V8 + GL + game). Honest; the low-end tier is where the thesis is tested. |
 
+### Stress scenario — fps-vs-load curve (`--scenario stress`)
+
+```bash
+bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 48 --migo-aar local:...
+bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --scenario stress --duration 48
+# -> out/stress_{migo,webview}.csv  (runtime,sprites,fps_median)
+```
+
+A deterministic **in-game sprite ramp** (500→1k→2k→3k→5k→8k→12k→20k, 5 s each — Pixi-ticker based, identical both sides; `scripts/make-stress-game.sh` generates it from the normal bundle) drives the load while the harness records `bunnies=N fps=M`. fps is plotted against N (the load the system can't know).
+
+Mate30 result — **both hold ~60 fps to 20 000 sprites** (WebView 60 across the board; Migo 58–60). The Kirin 990 doesn't reach either runtime's knee at 20 k, so throughput ties under load here too — a bigger ramp or the low-end tier is where the curves would diverge.
+
 Notes: `fps_source=game-telemetry` on this device — EMUI restricts `dumpsys SurfaceFlinger --latency` (all-zeros), so fps falls back to the game's own counter for BOTH runtimes (symmetric); non-Huawei devices will use SurfaceFlinger. Migo pinned to `migo@ff29aa4`. High-end device → memory is the clear win; cold-start/fps modest — the low-end tier (GTM wedge) is the next test.
 
 ## Migo version pinning
