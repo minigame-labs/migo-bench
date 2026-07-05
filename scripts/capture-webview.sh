@@ -27,7 +27,7 @@ else
   echo "cold_start_ms=$(cold_start_ms "$PKG" "$ACT" "$ACT" "$COLD")" >> "${pfx}_meta.txt"
   echo "game_ready_ms=$(game_ready_ms "$PKG" "$ACT" "$ACT" "$COLD")" >> "${pfx}_meta.txt"
   "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
-  "${ADB[@]}" shell am start -n "$PKG/$ACT" >/dev/null 2>&1; sleep 5
+  "${ADB[@]}" shell am start -n "$PKG/$ACT" $(_asset_extra) >/dev/null 2>&1; sleep 5
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"   # writes ${pfx}_fps.txt + fps_source=...
   echo "cpu_pct=$(capture_cpu "$PKG" sandboxed_process)" >> "${pfx}_meta.txt"   # app + chromium renderer
   # Fair PSS: main process + chromium sandboxed renderer (dumpsys meminfo <pkg> omits the renderer).

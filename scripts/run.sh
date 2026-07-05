@@ -22,9 +22,17 @@ OUT="$DIR/../out"; mkdir -p "$OUT"
 LABEL="${GAME}_${RUNTIME}"
 migo_ver="n/a"
 
-# The stress scenario needs the (generated) bunnymark-stress asset bundled into
-# the shell APK, so regenerate it before the capture builds the shell.
-[[ "$SCEN" == stress ]] && bash "$DIR/make-stress-game.sh"
+# Select the bundled game asset dir. bunnymark is the shells' built-in default
+# ("game"); any other game lives in assets/game-<name>/ and is threaded into every
+# launch via GAME_ASSET (see lib.sh _asset_extra). Exported for the capture children.
+[[ "$GAME" == bunnymark ]] || export GAME_ASSET="game-$GAME"
+
+# The stress scenario's in-game ramp is Pixi-ticker based (bunnymark only).
+if [[ "$SCEN" == stress ]]; then
+  [[ "$GAME" == bunnymark ]] || { echo "ERROR: --scenario stress is bunnymark-only (ramp is Pixi-specific)" >&2; exit 2; }
+  # Regenerate the (gitignored) bunnymark-stress asset before the capture builds the shell.
+  bash "$DIR/make-stress-game.sh"
+fi
 
 if [[ "$RUNTIME" == migo ]]; then
   [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required for --runtime migo" >&2; exit 2; }

@@ -10,9 +10,10 @@ runtime that replaces the WebView" positioning.
 
 ## 📊 结果报告 / Results report
 
-**[RESULTS.md（中文，默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
+**[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
 TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less · CPU ~half · under heavy load Migo ~1.9× fps · startup ~par cool / ~2.4× faster when throttled · fps tie at normal load.**
+And the payoff finding — on the heavier, **real Phaser game** endless-runner the gaps **widen**: **memory Migo ~61% less · CPU ~1/7 · game-ready ~par · fps tie.** Migo's native cost is near-fixed; WebView's Chromium tax grows with the app, so heavier/more-real games favour Migo more.
 
 ## What it measures (and the honest weighting)
 
@@ -39,7 +40,7 @@ cold-start = `reportFullyDrawn()` + `am start -W`. memory = `dumpsys meminfo`.
 ## Layout
 
 ```
-games/       game payloads (bunnymark; browser + Migo builds, MIT)
+games/       game payloads (bunnymark Pixi v8, endless-runner Phaser; browser + Migo builds)
 shells/      webview-shell + migo-shell  (symmetric minimal apps, each loads one game directly)
 scripts/     lib.sh, capture-*.sh, run.sh, parse.py, resolve-migo-aar.sh
 out/         results.csv + raw logs (gitignored except results.csv)
