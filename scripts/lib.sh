@@ -72,6 +72,13 @@ capture_fps() {
 # capture_mem <pkg> <out_file>  -> dumpsys meminfo
 capture_mem() { "${ADB[@]}" shell dumpsys meminfo "$1" > "$2" 2>/dev/null || true; }
 
+# _amtime_ms <token>  ActivityManager time -> total ms. It prints "+868ms" when
+# < 1s but "+1s43ms" (and "+1m2s..") once >= 1s, so a plain \d+ms regex silently
+# drops every slow (low-end / throttled) start. Parse every unit.
+_amtime_ms() {
+  python3 -c "import re,sys;t=sys.argv[1];u={'h':3600000,'m':60000,'s':1000,'ms':1};print(sum(int(v)*u[x] for v,x in re.findall(r'(\d+)(ms|s|m|h)',t)))" "$1"
+}
+
 # capture_cpu <pkg> [renderer_match]  -> prints app CPU% (multi-core, may exceed 100)
 #   measured as a /proc/<pid>/stat (utime+stime) delta over ~3s. For WebView pass
 #   "sandboxed_process" so the chromium renderer's CPU is summed in (fair — same
@@ -94,14 +101,15 @@ capture_cpu() {
 #   start to reportFullyDrawn() (game-ready). Only shells that call reportFullyDrawn
 #   emit it (migo does; webview would need a JS bridge). Empty if none seen.
 game_ready_ms() {
-  local pkg="$1" disp="$2" launch="$3" runs="$4" i ms vals=()
+  local pkg="$1" disp="$2" launch="$3" runs="$4" i ms tok vals=()
   for ((i=0; i<runs; i++)); do
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2; "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
     "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
-    sleep 6
-    ms=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Fully drawn ${pkg}/${disp}: \+[0-9]+ms" | head -1 | grep -oE '[0-9]+' | head -1)
+    sleep 8
+    tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Fully drawn ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
+    [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
     [ -n "$ms" ] && vals+=("$ms")
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
   done
@@ -114,17 +122,16 @@ game_ready_ms() {
 #   For migo, launch=.LauncherActivity but the displayed activity is .BenchGameActivity
 #   (the launcher forwards + finishes). Prints the median ms.
 cold_start_ms() {
-  local pkg="$1" launch="$2" disp="$3" runs="$4" i ms vals=()
+  local pkg="$1" launch="$2" disp="$3" runs="$4" i ms tok vals=()
   for ((i=0; i<runs; i++)); do
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2
     "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
     "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
-    sleep 6
-    ms=$("${ADB[@]}" logcat -d 2>/dev/null \
-        | grep -oE "Displayed ${pkg}/${disp}: \+[0-9]+ms" | head -1 \
-        | grep -oE '\+[0-9]+ms' | grep -oE '[0-9]+')
+    sleep 8
+    tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Displayed ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
+    [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
     [ -n "$ms" ] && vals+=("$ms")
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
   done

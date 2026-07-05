@@ -12,7 +12,7 @@ runtime that replaces the WebView" positioning.
 
 **[RESULTS.md（中文，默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
-TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less, CPU ~half, game-ready on par, fps tie.**
+TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less · CPU ~half · under heavy load Migo ~1.9× fps · startup ~par cool / ~2.4× faster when throttled · fps tie at normal load.**
 
 ## What it measures (and the honest weighting)
 
