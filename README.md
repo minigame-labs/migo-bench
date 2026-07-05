@@ -42,9 +42,11 @@ cold-start = `reportFullyDrawn()` + `am start -W`. memory = `dumpsys meminfo`.
 ```
 games/       game payloads (bunnymark Pixi v8, endless-runner Phaser; browser + Migo builds)
 shells/      webview-shell + migo-shell  (symmetric minimal apps, each loads one game directly)
-scripts/     lib.sh, capture-*.sh, run.sh, parse.py, resolve-migo-aar.sh
+scripts/     lib.sh, capture-*.sh, run.sh, parse.py, compare.py, resolve-migo-aar.sh
+baselines/   pinned reference result rows (regression gate compares new runs against these)
 out/         results.csv + raw logs (gitignored except results.csv)
-tests/       parse.py fixture tests
+tests/       parse.py + compare.py fixture tests
+.github/     host CI (pytest, script lint, webview-shell build, compare self-test)
 ```
 
 ## Discipline
@@ -67,27 +69,41 @@ bash scripts/run.sh --runtime migo --game bunnymark --device <SERIAL> --duration
 column -t -s, out/results.csv
 ```
 
-### Milestone-1 result — bunnymark, 100 sprites, Huawei Mate30 Pro (Kirin 990, Android 12 / API 31)
+The authoritative numbers, the device × game matrix, and every per-metric table live in
+**[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)** — not duplicated here.
 
-| metric | WebView | Migo | read |
-|---|---|---|---|
-| **PSS memory** | **~207 MB** | **~118 MB** | **Migo ~43% less.** WebView renders in a *separate* chromium sandboxed process; the harness sums it (main + renderer) — counting only the main process would unfairly undercount WebView by ~100 MB. Migo is single-process. |
-| fps (median / 1% low) | 60 / 60 | 60 / 58 | tie (as expected — never the headline) |
-| cold-start (system `Displayed`, ms) | 384 | 460 | **WebView faster here** — its system Chromium is pre-warmed/shared; Migo cold-starts its whole runtime (V8 + GL + game). Honest; the low-end tier is where the thesis is tested. |
-
-### Stress scenario — fps-vs-load curve (`--scenario stress`)
+### Stress scenario — fps-vs-load curve (`--scenario stress`, bunnymark only)
 
 ```bash
-bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 48 --migo-aar local:...
-bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --scenario stress --duration 48
+bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
+bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --scenario stress --duration 55
 # -> out/stress_{migo,webview}.csv  (runtime,sprites,fps_median)
 ```
 
-A deterministic **in-game sprite ramp** (500→1k→2k→3k→5k→8k→12k→20k, 5 s each — Pixi-ticker based, identical both sides; `scripts/make-stress-game.sh` generates it from the normal bundle) drives the load while the harness records `bunnies=N fps=M`. fps is plotted against N (the load the system can't know).
+A deterministic **in-game sprite ramp** (2k→220k, 5 s per stage — Pixi-ticker based, identical
+both sides; `scripts/make-stress-game.sh` generates it from the normal bundle) drives the load
+while the harness records `bunnies=N fps=M`. fps is plotted against N. Past ~20k the curves
+diverge (native-GL Migo scales ~1.9× better under heavy load) — see RESULTS §3.3.
 
-Mate30 result — **both hold ~60 fps to 20 000 sprites** (WebView 60 across the board; Migo 58–60). The Kirin 990 doesn't reach either runtime's knee at 20 k, so throughput ties under load here too — a bigger ramp or the low-end tier is where the curves would diverge.
+## Regression workflow — compare against a baseline
 
-Notes: `fps_source=game-telemetry` on this device — EMUI restricts `dumpsys SurfaceFlinger --latency` (all-zeros), so fps falls back to the game's own counter for BOTH runtimes (symmetric); non-Huawei devices will use SurfaceFlinger. Migo pinned to `migo@ff29aa4`. High-end device → memory is the clear win; cold-start/fps modest — the low-end tier (GTM wedge) is the next test.
+The whole point of the framework: **any future Migo fix/optimization re-runs the same capture and
+is diffed against a pinned baseline.** `scripts/compare.py` turns two `results.csv` into a verdict.
+
+```bash
+# 1) Showcase table — Migo vs WebView for a game (from one results.csv):
+python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+
+# 2) Regression gate — a NEW Migo build vs the committed baseline (same game).
+#    Exits non-zero if any metric regressed past --threshold (default 5%) -> gate a PR.
+python3 scripts/compare.py --results out/results.csv --baseline baselines/mate30.csv --game bunnymark
+```
+
+Metrics carry a direction (memory/CPU/startup lower-better, fps higher-better); a change within
+the threshold is treated as single-run noise. Baselines are committed under `baselines/` and
+stamped with the Migo version they were captured against. `.github/workflows/ci.yml` runs the
+host-side checks (pytest, script lint, the WebView shell build, and a compare self-test) on every
+push — real-device capture stays local (a hosted runner has no phone).
 
 ## Migo version pinning
 
