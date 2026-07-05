@@ -69,7 +69,12 @@ public class WebViewBenchActivity extends Activity {
         // dumpsys gfxinfo sees real frame timing (matches Migo's GPU path).
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-        webView.loadUrl("file:///android_asset/game/index.html");
+        // Which game asset dir to load (default "game"; "game-stress" for the ramp curve).
+        String asset = getIntent().getStringExtra("game_asset");
+        if (asset == null || asset.trim().isEmpty()) {
+            asset = "game";
+        }
+        webView.loadUrl("file:///android_asset/" + asset + "/index.html");
     }
 
     @Override

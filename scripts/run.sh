@@ -22,14 +22,23 @@ OUT="$DIR/../out"; mkdir -p "$OUT"
 LABEL="${GAME}_${RUNTIME}"
 migo_ver="n/a"
 
+# The stress scenario needs the (generated) bunnymark-stress asset bundled into
+# the shell APK, so regenerate it before the capture builds the shell.
+[[ "$SCEN" == stress ]] && bash "$DIR/make-stress-game.sh"
+
 if [[ "$RUNTIME" == migo ]]; then
   [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required for --runtime migo" >&2; exit 2; }
   migo_ver="$(bash "$DIR/resolve-migo-aar.sh" "$MIGO_AAR" "$DIR/../shells/migo-shell/app/libs/migo.aar")"
-  bash "$DIR/capture-migo.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD"
+  bash "$DIR/capture-migo.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"
 elif [[ "$RUNTIME" == webview ]]; then
-  bash "$DIR/capture-webview.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD"
+  bash "$DIR/capture-webview.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"
 else
   echo "ERROR: unknown runtime $RUNTIME (want webview|migo)" >&2; exit 2
+fi
+
+if [[ "$SCEN" == stress ]]; then
+  echo "[run] stress curve written to $OUT/stress_${RUNTIME}.csv (migo=$migo_ver)"
+  exit 0
 fi
 
 src="$(grep -oE 'fps_source=[a-z-]+' "$OUT/${LABEL}_meta.txt" | head -1 | cut -d= -f2 || true)"
