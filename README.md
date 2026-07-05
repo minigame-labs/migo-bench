@@ -14,7 +14,7 @@ runtime that replaces the WebView" positioning.
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
 TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less · CPU ~half · under heavy load Migo ~1.9× fps · startup ~par cool / ~2.4× faster when throttled · fps tie at normal load.**
 And the payoff finding — on the heavier, **real Phaser game** endless-runner the gaps **widen**: **memory Migo ~61% less · CPU ~1/7 · game-ready ~par · fps tie.** Migo's native cost is near-fixed; WebView's Chromium tax grows with the app, so heavier/more-real games favour Migo more.
-The honest counter-example — **canvasmark (Canvas2D path)**: Migo still wins CPU (~half) and ties fps, but **memory is worse** (~150–285 MB churn vs WebView's stable ~221 MB) — Migo's Canvas2D per-frame allocation is a real optimization target this framework surfaced. A benchmark that only ever flatters its sponsor isn't credible; this one reports where Migo loses too.
+The honest counter-example — **canvasmark (Canvas2D path)**: Migo still wins CPU (~half) and ties fps, but **memory is worse** (~150–285 MB churn vs WebView's stable ~221 MB) — a per-draw GPU-resource leak in Migo's Canvas2D path (bisected to ~400 B of locked GL memory per fill draw) that this framework surfaced. A benchmark that only ever flatters its sponsor isn't credible; this one reports where Migo loses too.
 
 ## What it measures (and the honest weighting)
 

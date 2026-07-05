@@ -13,7 +13,7 @@
 - ✅ **启动抗压:热机下 Migo 更快**——凉机游戏就绪基本持平(506 vs 528ms),但连续跑热/降频后 Migo 506ms vs WebView 1242ms(**~2.4×**),WebView 的 Chromium 冷启动被降频严重放大。
 - = **帧率(常规负载):打平**(都 ~60fps)。
 - ✅✅ **游戏越重,差距越大**——换成真实的 Phaser 游戏 endless-runner,内存差从 33% 拉大到 **61%**、CPU 从 ~2.6× 拉大到 **~7×**(Migo 原生开销近乎固定,WebView 的 Chromium 税随应用增长)。见 §3.6。
-- ⚠️ **诚实反例(Canvas2D)**——第三款游戏 canvasmark 走 Canvas2D 路径:Migo **CPU 仍赢一半、帧率打平**,但**内存反而更高更抖**(~150–285MB 锯齿 vs WebView 稳 ~221MB)。这是本框架挖出的一个**真实 Migo 优化点**(Canvas2D 每帧分配过重),不回避。见 §3.7。
+- ⚠️ **诚实反例(Canvas2D)**——第三款游戏 canvasmark 走 Canvas2D 路径:Migo **CPU 仍赢一半、帧率打平**,但**内存反而更高更抖**(~150–285MB 锯齿 vs WebView 稳 ~221MB)。这是本框架 bisect 定位出的一个**真实 Migo GPU 资源泄漏**(每次 Canvas2D fill 绘制泄漏 ~400B 被锁定的 GL 资源),不回避。见 §3.7。
 
 > 注意:这是**高端机**(麒麟 990)。多数指标 Migo 已占优;GTM 楔子市场是**低端机**(内存小、易降频),内存/启动/重载差距预计更大——低端机是下一步的核心测试(见矩阵)。
 
@@ -27,7 +27,7 @@
 
 > 目前 1 台设备 × 3 游戏已跑通(覆盖两条渲染路径:WebGL × 2 + Canvas2D × 1);矩阵随设备到位逐格填充。
 > **交叉发现 1(WebGL)**:换成更重、更真实的 Phaser 游戏,Migo 领先不缩反**大幅拉大**(内存差 33%→61%,CPU ~2.6×→~7×)——见 §3.6。
-> **交叉发现 2(Canvas2D,诚实反例 ⚠️)**:canvasmark 上 Migo **CPU 仍赢约一半、帧率打平,但内存反而更高**——Migo 的 Canvas2D 路径每帧分配重、内存抖动飙到 ~2× WebView,是本框架**挖出的一个真实 Migo 优化点**——见 §3.7。
+> **交叉发现 2(Canvas2D,诚实反例 ⚠️)**:canvasmark 上 Migo **CPU 仍赢约一半、帧率打平,但内存反而更高**——根因(已 bisect 定位)=Migo Canvas2D **每次 fill 绘制泄漏一个被锁定的 GL 资源**,内存抖到 ~2× WebView,是本框架挖出的一个真实 Migo GPU 泄漏——见 §3.7。
 
 ## 3. 结果:Mate30 Pro × bunnymark(100 精灵,60s 稳态)
 
@@ -123,11 +123,21 @@
 | 游戏就绪 | 380 ms | 450 ms | WebView 略快 ~18% |
 | **PSS 内存** | **~221 MB(稳)** | **~150–285 MB(抖动)** | **⚠️ Migo 更差** |
 
-**反例发现(本框架的价值所在)**:canvasmark 上 **Migo 内存反而更高且不稳**。100 精灵、无交互下,Migo 的 PSS 从 ~148MB 一路涨到 ~285MB(~3MB/s)再被 GC 拉回 ~257MB,**锯齿式**在 ~150–285MB 之间抖;而 WebView 稳在 ~221MB。根因指向 **Migo 的 Canvas2D 路径每帧分配过重**(command buffer / 每帧 surface/snapshot 没有池化复用),造成高 GC churn、工作集翻倍。不是永久泄漏(GC 能回收),但内存压力明显。
+**反例发现(本框架的价值所在)**:canvasmark 上 **Migo 内存反而更高且不稳**。100 精灵、无交互下,Migo 的 PSS 锯齿式在 ~150–285MB 之间涨-回收(~3MB/s 涨,周期性 purge),WebView 稳在 ~221MB。**已用本框架系统 bisect 定位根因**:
 
-**这正是 benchmark 该干的事**:不是给 Migo 唱赞歌,而是诚实地找出**Migo 在哪条路径上需要优化**。结论:**WebGL 路径 Migo 全面领先(且越重越大);Canvas2D 路径 Migo 赢 CPU、平帧率,但内存分配是个真实待优化项**。修好 Migo 的 2D 分配后,重跑 canvasmark 内存回落 = 本框架的回归门正好验证修复(见 README「Regression workflow」)。
+| 探针 | 每帧 fill 数 | 每帧换色 | 40s 内 GL 内存 |
+|---|---|---|---|
+| 只画背景 | 1 | ~0 | **平,18MB** |
+| 100 fill,无变换 | 101 | ~100 | 46→130MB |
+| 100 fill,固定色 | 101 | 2 | 37→122MB |
 
-> 单轮 + 追加的时间序列采样(t=6/20/40/65/90s → 148/191/249/285/257MB);方向(Migo 2D 内存更高更抖)稳健、可复现。fps 遥测=游戏自带 rAF 计数器 `[canvasmark] sprites=N fps=M`(两侧同源)。
+- 增长**全在 GPU 图形内存(`dumpsys meminfo` 的 `GL mtrack`)**,Java/Native 堆纹丝不动 → **不是 JS/GC 堆**(我最初以为是 JS `save/restore` 分配,真机实测证伪)。
+- 泄漏**只随每帧 fill 绘制次数线性增长**(与颜色、旋转/变换、present 均无关)→ **每次 Canvas2D fill 绘制泄漏 ~400 字节 GL 资源**。
+- 这些资源**被锁定引用、Skia 清理 purge 不掉**(把每帧 deferred-cleanup 调到 0ms 激进 purge 也无效)→ 是 **Migo Canvas2D 渲染路径的真实 GPU 资源泄漏**(每次 draw 留下一个不释放的 GPU 引用),不是缓存抖动、也不是 GC 问题。
+
+**这正是 benchmark 该干的事**:不是给 Migo 唱赞歌,而是诚实定位**Migo 哪条路径要优化**。结论:**WebGL 路径 Migo 全面领先(越重越大);Canvas2D 路径 Migo 赢 CPU、平帧率,但有一个真实的 per-draw GPU 资源泄漏待修**。修好后重跑 canvasmark,GL 内存转平 = 本框架回归门正好验证修复(见 README「Regression workflow」)。fps 全程 60 不受影响。
+
+> 已定位到"每次 fill 绘制泄漏被锁定的 GL 资源",但精确的持有引用点需要更深的 render-engine 代码考古 + GPU 工具,未在本轮修复(不做无根据的猜测式修改)。fps 遥测=游戏自带 rAF 计数器 `[canvasmark] sprites=N fps=M`(两侧同源)。
 
 ## 4. 测量方法(系统级、app 无关、可审计)
 
