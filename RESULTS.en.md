@@ -13,7 +13,7 @@ Same game, same device, same interaction, on the **Migo native runtime** vs the 
 - ✅ **Startup resilience under heat: Migo faster** — game-ready is ~par on a cool device (506 vs 528 ms), but after sustained load / throttling Migo 506 ms vs WebView 1242 ms (**~2.4×**); WebView's Chromium cold start is amplified badly by throttling.
 - = **fps (normal load): tie** (both ~60).
 - ✅✅ **The heavier the game, the bigger the gap** — swapping in the real Phaser game endless-runner widens the memory gap from 33% to **61%** and CPU from ~2.6× to **~7×** (Migo's native cost is nearly fixed; WebView's Chromium tax grows with the app). See §3.6.
-- ⚠️ **Honest counter-example (Canvas2D)** — the third game canvasmark takes the Canvas2D path: Migo **still wins CPU ~2× and ties fps**, but **memory is worse and churny** (~150–285 MB sawtooth vs WebView's stable ~221 MB). A real Migo optimization target this framework surfaced (heavy Canvas2D per-frame allocation) — not hidden. See §3.7.
+- ⚠️ **Honest counter-example (Canvas2D)** — the third game canvasmark takes the Canvas2D path: Migo **still wins CPU ~2× and ties fps**, but **memory is worse and churny** (~150–285 MB sawtooth vs WebView's stable ~221 MB). A real Migo GPU-resource leak this framework bisected (each Canvas2D fill draw leaks ~400 B of locked GL memory) — not hidden. See §3.7.
 
 > Note: this is a **high-end** device (Kirin 990). Migo already leads on most metrics; the GTM wedge is **low-end** (less RAM, throttles easily), where memory/startup/heavy-load gaps should widen — low-end is the key next test (see the matrix).
 
@@ -27,7 +27,7 @@ Same game, same device, same interaction, on the **Migo native runtime** vs the 
 
 > Currently 1 device × 3 games (two render paths: WebGL × 2 + Canvas2D × 1); the matrix fills in cell by cell as devices arrive.
 > **Cross-game finding 1 (WebGL)**: a heavier, real Phaser game does not shrink Migo's lead — it **widens it sharply** (memory 33%→61%, CPU ~2.6×→~7×) — see §3.6.
-> **Cross-game finding 2 (Canvas2D, honest counter-example ⚠️)**: on canvasmark Migo **still wins CPU ~2× and ties fps, but memory is worse** — Migo's Canvas2D path allocates heavily per frame, so memory churns to ~2× WebView. A real Migo optimization target this framework surfaced — see §3.7.
+> **Cross-game finding 2 (Canvas2D, honest counter-example ⚠️)**: on canvasmark Migo **still wins CPU ~2× and ties fps, but memory is worse** — root cause (bisected) = each Canvas2D fill draw leaks a locked GL resource, so memory churns to ~2× WebView. A real Migo GPU leak this framework surfaced — see §3.7.
 
 ## 3. Results: Mate30 Pro × bunnymark (100 sprites, 45 s steady)
 
@@ -122,21 +122,33 @@ natively (Skia-backed) — `getContext('2d')` is a real 2D context, rendering at
 | **PSS memory** | **~221 MB (stable)** | **~150–285 MB (churny)** | **⚠️ Migo worse** |
 
 **Counter-example finding (the framework earning its keep)**: on canvasmark **Migo's memory is
-higher and unstable**. At 100 sprites, no interaction, Migo's PSS climbs from ~148 MB to ~285 MB
-(~3 MB/s), then GC pulls it back to ~257 MB — a **sawtooth** between ~150–285 MB — while WebView
-holds a stable ~221 MB. The cause points to **Migo's Canvas2D path allocating too much per frame**
-(command buffer / per-frame surface/snapshot not pooled), driving high GC churn and a doubled
-working set. It is not a permanent leak (GC reclaims), but the memory pressure is real.
+higher and unstable** — a sawtooth between ~150–285 MB (grows ~3 MB/s, periodically purged) vs
+WebView's stable ~221 MB. **The framework was used to bisect the root cause on-device:**
 
-**This is exactly what a benchmark is for** — not to cheerlead for Migo, but to honestly find
-**where Migo needs work**. Verdict: **on the WebGL path Migo leads across the board (more so the
-heavier the game); on the Canvas2D path Migo wins CPU and ties fps, but per-frame allocation is a
-real optimization target**. When Migo's 2D allocation is fixed, re-running canvasmark shows the
-memory drop — the regression harness validating the fix (see README "Regression workflow").
+| probe | fills/frame | color changes/frame | GL memory over 40 s |
+|---|---|---|---|
+| background only | 1 | ~0 | **flat, 18 MB** |
+| 100 fills, no transform | 101 | ~100 | 46→130 MB |
+| 100 fills, fixed color | 101 | 2 | 37→122 MB |
 
-> Single-run + a follow-up time series (t=6/20/40/65/90 s → 148/191/249/285/257 MB); the direction
-> (Migo 2D memory higher and churnier) is robust and reproducible. fps telemetry is the game's own
-> rAF counter `[canvasmark] sprites=N fps=M` (same source both sides).
+- The growth is **entirely in GPU graphics memory** (`GL mtrack` in `dumpsys meminfo`); Java/Native
+  heap are flat → **not the JS/GC heap** (my first hypothesis, JS `save/restore` allocation, was
+  disproved by on-device measurement).
+- It scales **purely with the number of fill draws per frame** (independent of color, transform,
+  present) → **each Canvas2D fill draw leaks ~400 bytes of GL memory**.
+- Those resources are **locked/referenced — Skia's cleanup can't purge them** (even forcing an
+  aggressive 0 ms per-frame purge doesn't free them) → a **true GPU-resource leak in Migo's
+  Canvas2D render path** (each draw leaves an unfreed GPU reference), not a cache or GC artifact.
+
+**This is exactly what a benchmark is for** — not to cheerlead, but to honestly find **where Migo
+needs work**. Verdict: **on the WebGL path Migo leads across the board (more so the heavier the
+game); on the Canvas2D path Migo wins CPU and ties fps, but has a real per-draw GPU-resource leak
+to fix**. When it's fixed, re-running canvasmark shows GL memory go flat — the regression harness
+validating the fix (see README "Regression workflow"). fps holds 60 throughout.
+
+> The leak is localized to "each fill draw leaks a locked GL resource," but the exact retaining
+> reference needs deeper render-engine archaeology + GPU tooling — not fixed this round (no
+> guess-fixes). fps telemetry is the game's own rAF counter `[canvasmark] sprites=N fps=M`.
 
 ## 4. Measurement method (system-level, app-agnostic, auditable)
 
