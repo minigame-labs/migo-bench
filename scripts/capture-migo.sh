@@ -27,9 +27,11 @@ if [ "$SCEN" = stress ]; then
 else
   provenance_kv "$PKG" > "${pfx}_meta.txt"
   echo "cold_start_ms=$(cold_start_ms "$PKG" "$LAUNCH" "$DISP" "$COLD")" >> "${pfx}_meta.txt"
+  echo "game_ready_ms=$(game_ready_ms "$PKG" "$DISP" "$LAUNCH" "$COLD")" >> "${pfx}_meta.txt"
   "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
   "${ADB[@]}" shell am start -n "$PKG/$LAUNCH" >/dev/null 2>&1; sleep 8   # migo game load is async
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"
+  echo "cpu_pct=$(capture_cpu "$PKG")" >> "${pfx}_meta.txt"
   capture_mem "$PKG" "${pfx}_mem.txt"
-  echo "[migo] captured: $(grep -E 'cold_start_ms|fps_source' "${pfx}_meta.txt" | tr '\n' ' ')"
+  echo "[migo] captured: $(grep -E 'cold_start_ms|game_ready_ms|cpu_pct|fps_source' "${pfx}_meta.txt" | tr '\n' ' ')"
 fi

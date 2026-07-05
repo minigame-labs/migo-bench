@@ -41,11 +41,13 @@ if [[ "$SCEN" == stress ]]; then
   exit 0
 fi
 
-src="$(grep -oE 'fps_source=[a-z-]+' "$OUT/${LABEL}_meta.txt" | head -1 | cut -d= -f2 || true)"
-cold="$(grep -oE 'cold_start_ms=[0-9]+' "$OUT/${LABEL}_meta.txt" | head -1 | cut -d= -f2 || true)"
+metaf="$OUT/${LABEL}_meta.txt"
+mval() { grep -oE "$1=[0-9a-z.-]+" "$metaf" | head -1 | cut -d= -f2 || true; }
+src="$(mval fps_source)"; cold="$(mval cold_start_ms)"
+gready="$(mval game_ready_ms)"; cpu="$(mval cpu_pct)"
 [[ -f "$OUT/results.csv" ]] || python3 "$DIR/parse.py" --header-only > "$OUT/results.csv"
 python3 "$DIR/parse.py" --label "$LABEL" --runtime "$RUNTIME" --game "$GAME" \
   --migo-version "$migo_ver" --fps-source "$src" \
-  --meta "$OUT/${LABEL}_meta.txt" --mem "$OUT/${LABEL}_mem.txt" --fps "$OUT/${LABEL}_fps.txt" \
-  --cold-ms "$cold" >> "$OUT/results.csv"
-echo "[run] appended: $LABEL  fps_source=$src cold=${cold}ms migo=$migo_ver"
+  --meta "$metaf" --mem "$OUT/${LABEL}_mem.txt" --fps "$OUT/${LABEL}_fps.txt" \
+  --cold-ms "$cold" --game-ready-ms "$gready" --cpu-pct "$cpu" >> "$OUT/results.csv"
+echo "[run] appended: $LABEL  first_frame=${cold}ms game_ready=${gready}ms cpu=${cpu}% fps_src=$src migo=$migo_ver"

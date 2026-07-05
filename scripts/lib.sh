@@ -72,6 +72,42 @@ capture_fps() {
 # capture_mem <pkg> <out_file>  -> dumpsys meminfo
 capture_mem() { "${ADB[@]}" shell dumpsys meminfo "$1" > "$2" 2>/dev/null || true; }
 
+# capture_cpu <pkg> [renderer_match]  -> prints app CPU% (multi-core, may exceed 100)
+#   measured as a /proc/<pid>/stat (utime+stime) delta over ~3s. For WebView pass
+#   "sandboxed_process" so the chromium renderer's CPU is summed in (fair — same
+#   reason the renderer's PSS is summed).
+capture_cpu() {
+  local pkg="$1" rmatch="${2:-}" clk pids p v t0=0 t1=0
+  clk=$("${ADB[@]}" shell getconf CLK_TCK | tr -d '\r'); clk=${clk:-100}
+  pids=$("${ADB[@]}" shell pidof "$pkg" 2>/dev/null | tr -d '\r')
+  if [ -n "$rmatch" ]; then
+    pids="$pids $("${ADB[@]}" shell "ps -A -o PID,ARGS 2>/dev/null | grep -i '$rmatch' | grep -v grep | awk '{print \$1}'" | tr -d '\r')"
+  fi
+  for p in $pids; do v=$("${ADB[@]}" shell "cat /proc/$p/stat 2>/dev/null" | awk '{print $14+$15}'); t0=$((t0 + ${v:-0})); done
+  sleep 3
+  for p in $pids; do v=$("${ADB[@]}" shell "cat /proc/$p/stat 2>/dev/null" | awk '{print $14+$15}'); t1=$((t1 + ${v:-0})); done
+  awk "BEGIN{printf \"%.0f\", ($t1-$t0)/$clk/3*100}"
+}
+
+# game_ready_ms <pkg> <displayed_activity> <launch_activity> <runs>
+#   Median of ActivityManager's "Fully drawn <pkg>/<disp>: +Nms" — process cold
+#   start to reportFullyDrawn() (game-ready). Only shells that call reportFullyDrawn
+#   emit it (migo does; webview would need a JS bridge). Empty if none seen.
+game_ready_ms() {
+  local pkg="$1" disp="$2" launch="$3" runs="$4" i ms vals=()
+  for ((i=0; i<runs; i++)); do
+    "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+    "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
+    sleep 2; "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
+    "${ADB[@]}" shell am start -n "$pkg/$launch" >/dev/null 2>&1
+    sleep 6
+    ms=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Fully drawn ${pkg}/${disp}: \+[0-9]+ms" | head -1 | grep -oE '[0-9]+' | head -1)
+    [ -n "$ms" ] && vals+=("$ms")
+    "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  done
+  printf '%s\n' "${vals[@]}" | sort -n | awk '{a[NR]=$1} END{if(NR)print a[int((NR+1)/2)]}'
+}
+
 # cold_start_ms <pkg> <launch_activity> <displayed_activity> <runs>
 #   Cold launches <runs> times; each reads ActivityManager's system-level
 #   "Displayed <pkg>/<displayed_activity>: +Nms" (launch -> first surface frame).

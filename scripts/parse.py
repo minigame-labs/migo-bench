@@ -15,7 +15,8 @@ COLUMNS = [
     "label", "runtime", "game",
     "device_model", "device_brand", "android_release", "android_sdk",
     "webview_version", "migo_version", "harness_version", "timestamp",
-    "fps_source", "cold_start_ms", "pss_peak_kb", "fps_median", "fps_1pct_low",
+    "fps_source", "first_frame_ms", "game_ready_ms", "cpu_pct",
+    "pss_peak_kb", "fps_median", "fps_1pct_low",
 ]
 
 
@@ -63,7 +64,9 @@ def main():
     ap.add_argument("--meta")
     ap.add_argument("--mem")
     ap.add_argument("--fps")
-    ap.add_argument("--cold-ms", default="")
+    ap.add_argument("--cold-ms", default="")       # first-frame (Displayed)
+    ap.add_argument("--game-ready-ms", default="")  # Fully drawn (game-ready)
+    ap.add_argument("--cpu-pct", default="")
     a = ap.parse_args()
 
     if a.header_only:
@@ -85,7 +88,9 @@ def main():
         "harness_version": meta.get("harness_version", ""),
         "timestamp": meta.get("timestamp", ""),
         "fps_source": a.fps_source,
-        "cold_start_ms": a.cold_ms,
+        "first_frame_ms": a.cold_ms,
+        "game_ready_ms": a.game_ready_ms,
+        "cpu_pct": a.cpu_pct,
         "pss_peak_kb": pss_peak_kb(a.mem) if a.mem else "",
         "fps_median": fps_median,
         "fps_1pct_low": fps_low,
