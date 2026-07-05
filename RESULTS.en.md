@@ -1,0 +1,99 @@
+# migo-bench Results
+
+> Chinese is the default version — see [RESULTS.md](RESULTS.md). This is the English mirror.
+> Raw data: `out/results.csv` (steady) and `out/stress_*.csv` (stress curve). Every row carries full provenance (Migo version, device, WebView version, timestamp, `fps_source`).
+
+## 1. Bottom line
+
+Same game, same device, same interaction, on the **Migo native runtime** vs the **Android System WebView**. Positioning: Migo = an open-source native WebView replacement. **The headline is consistency + auditability + memory/CPU efficiency; fps usually ties and is never oversold.**
+
+- ✅ **Memory: Migo is clearly lighter** (this run ~148 MB vs WebView ~221 MB, ~33% less). The catch: WebView renders in a **separate chromium process** that must be counted for fairness (otherwise WebView is undercounted by ~100 MB).
+- ✅ **CPU: Migo is about half of WebView** (48% vs 108%, same 100 sprites at 60 fps) — native GL is lighter than Chromium's compositor; also the energy proxy.
+- ≈ **Game-ready (first playable frame): on par** (Migo 525 ms vs WebView 537 ms).
+- = **fps: tie** (both ~60; both still 60 fps at 20 000 sprites under stress).
+
+> Note: this is a **high-end** device (Kirin 990). The GTM wedge is **low-end**, where the memory/startup gap grows — low-end is the key next test (see the matrix).
+
+## 2. Test matrix (device × game)
+
+| Device tier \ game | bunnymark (Pixi v8) | endless-runner (Phaser) | Canvas2D (TBD) |
+|---|---|---|---|
+| **High-end** · Huawei Mate30 Pro (Kirin 990 / 8 GB / A12) | ✅ done | 🔜 planned | 🔜 planned |
+| **Mid** (~4 GB, to source) | 🔜 | 🔜 | 🔜 |
+| **Low-end** ⭐ (~2–3 GB, to source, GTM wedge) | 🔜 | 🔜 | 🔜 |
+
+> Currently 1 device × 1 game is running; the matrix fills in cell by cell as devices arrive. Each cell yields the metric set below.
+
+## 3. Results: Mate30 Pro × bunnymark (100 sprites, 60 s steady)
+
+### 3.1 Memory 🏆 Migo
+
+| metric | WebView | Migo | delta |
+|---|---|---|---|
+| PSS peak | **~221 MB** | **~148 MB** | **Migo ~33% less** |
+
+- **Fair accounting**: WebView = main process + chromium sandboxed renderer (`dumpsys meminfo <pkg>` counts only the main process, missing ~100 MB of renderer). Migo is **single-process**, fully counted.
+- PSS has ±tens-of-MB jitter (GC / system state); averaging multiple runs firms it up, but the direction (Migo clearly lighter) is robust.
+
+### 3.2 Startup ≈ on par
+
+| metric | WebView | Migo | note |
+|---|---|---|---|
+| first frame (system `Displayed`, ms) | 396 | 458 | window first draw; Migo has an extra Launcher→Game hop + SurfaceView, not fully comparable |
+| **game-ready (system `Fully drawn`, ms)** | **537** | **525** | **fair**: game's first real frame → `reportFullyDrawn()`. On par, Migo slightly faster (V8 snapshot offsets native init) |
+
+> "first frame (Displayed)" fires on WebView's blank window — early and non-comparable across a WebView vs a SurfaceView. **Use game-ready.**
+
+### 3.3 fps = tie
+
+| metric | WebView | Migo |
+|---|---|---|
+| fps median | 60 | 59 |
+| 1% low | 60 | 57 |
+
+**Stress curve (deterministic in-game ramp, `--scenario stress`):**
+
+| sprites | WebView fps | Migo fps |
+|---:|---:|---:|
+| 100 | 60 | 59 |
+| 1000 | 60 | 59 |
+| 5000 | 60 | 60 |
+| 12000 | 60 | 59 |
+| 20000 | 60 | 60 |
+
+Both hold 60 fps to 20 000 sprites — the high-end ceiling is well beyond 20 k, so throughput ties. A low-end device or a bigger ramp is where the curves diverge.
+
+### 3.4 CPU 🏆 Migo
+
+| metric | WebView | Migo | delta |
+|---|---|---|---|
+| CPU (multi-core, may exceed 100%) | **108%** | **48%** | **Migo ~half** |
+
+- Method: `/proc/<pid>/stat` (utime+stime) delta; WebView includes the main + chromium renderer processes (same as memory).
+- Half the CPU at the same fps → lower power (see Energy). Single sample; multiple runs firm it up.
+
+### 3.5 Energy (proxy)
+
+Direct on-device energy is limited here: this EMUI device **disables the fuel gauge** (`current_now` unreadable) and the **per-uid batterystats energy model is unavailable**, and USB power masks battery drain. **CPU is used as the energy proxy** (at fixed fps, CPU is the dominant power driver) → Migo favorable. True energy awaits: (1) a non-Huawei device (open fuel gauge), (2) an unplugged run + battery-% delta, or (3) an external power meter.
+
+## 4. Measurement method (system-level, app-agnostic, auditable)
+
+- **Memory**: `dumpsys meminfo`; WebView sums main + `:sandboxed_process` (`webview_pss.py`).
+- **Startup**: system `am` `Displayed` (first frame) + `reportFullyDrawn`/`Fully drawn` (game-ready); no app-log parsing.
+- **fps**: prefer `dumpsys SurfaceFlinger --latency` (compositor present-timestamps, app-agnostic); **this EMUI device blocks it (all zeros)**, so fall back to the game's own fps telemetry (same source both sides, symmetric), recorded per row as `fps_source`. Non-Huawei devices use SurfaceFlinger.
+- **CPU**: `/proc/<pid>/stat` delta (WebView incl. renderer).
+- **Stress**: deterministic in-game sprite ramp (Pixi ticker, identical both sides; generated by `make-stress-game.sh`), fps plotted vs sprite count.
+- **Stability guard**: force screen-on before capture (`svc power stayon`) — a slept screen stops the activity and yields zero frames/data.
+
+## 5. Reproduce
+
+```bash
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+# steady:
+bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3
+bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 --migo-aar local:.../migo-debug.aar
+# stress curve:
+bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 48 --migo-aar local:...
+```
+
+Pin the Migo version with `--migo-aar local:PATH | release-tag:TAG | sha:SHA` — every result is tied to an exact Migo version (auditability).

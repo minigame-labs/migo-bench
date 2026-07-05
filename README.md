@@ -8,6 +8,12 @@ runtime that replaces the WebView" positioning.
 > harness** (every Migo optimization/fix re-runs the same comparison against a baseline).
 > A credible, reproducible benchmark *is* the marketing artifact — credibility is the sell.
 
+## 📊 结果报告 / Results report
+
+**[RESULTS.md（中文，默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
+device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
+TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less, CPU ~half, game-ready on par, fps tie.**
+
 ## What it measures (and the honest weighting)
 
 - **Headline — consistency & auditability + memory.** Migo bundles ONE runtime → identical
