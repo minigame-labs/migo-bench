@@ -8,7 +8,7 @@ set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$DIR/.."
 
-RAMP=';(function(){var st=[500,1000,2000,3000,5000,8000,12000,20000],i=0,acc=0;app.ticker.add(function(){acc+=app.ticker.deltaMS;if(i<st.length&&acc>=(i+1)*5000){var d=st[i]-bunnies.length;i++;if(d>0)addBunnies(d);}});})();'
+RAMP=';(function(){var st=[2000,5000,10000,20000,40000,70000,100000,140000,180000,220000],i=0,acc=0;app.ticker.add(function(){acc+=app.ticker.deltaMS;if(i<st.length&&acc>=(i+1)*5000){var d=st[i]-bunnies.length;i++;if(d>0)addBunnies(d);}});})();'
 
 mkdir -p "$ROOT/games/bunnymark-stress"
 for src in game.js game.bundle.js; do
