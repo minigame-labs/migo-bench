@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Canvasmark (WebView baseline)</title>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #12121e; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- WebView baseline: native Canvas 2D, no adapter. Migo loads the same game code from
+       game.js (adapter prepended -> native Skia 2D via getContext('2d')). -->
+  <canvas id="GameCanvas"></canvas>
+  <script src="game.bundle.js"></script>
+</body>
+</html>

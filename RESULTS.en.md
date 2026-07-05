@@ -13,19 +13,21 @@ Same game, same device, same interaction, on the **Migo native runtime** vs the 
 - ✅ **Startup resilience under heat: Migo faster** — game-ready is ~par on a cool device (506 vs 528 ms), but after sustained load / throttling Migo 506 ms vs WebView 1242 ms (**~2.4×**); WebView's Chromium cold start is amplified badly by throttling.
 - = **fps (normal load): tie** (both ~60).
 - ✅✅ **The heavier the game, the bigger the gap** — swapping in the real Phaser game endless-runner widens the memory gap from 33% to **61%** and CPU from ~2.6× to **~7×** (Migo's native cost is nearly fixed; WebView's Chromium tax grows with the app). See §3.6.
+- ⚠️ **Honest counter-example (Canvas2D)** — the third game canvasmark takes the Canvas2D path: Migo **still wins CPU ~2× and ties fps**, but **memory is worse and churny** (~150–285 MB sawtooth vs WebView's stable ~221 MB). A real Migo optimization target this framework surfaced (heavy Canvas2D per-frame allocation) — not hidden. See §3.7.
 
 > Note: this is a **high-end** device (Kirin 990). Migo already leads on most metrics; the GTM wedge is **low-end** (less RAM, throttles easily), where memory/startup/heavy-load gaps should widen — low-end is the key next test (see the matrix).
 
 ## 2. Test matrix (device × game)
 
-| Device tier \ game | bunnymark (Pixi v8) | endless-runner (Phaser) | Canvas2D (TBD) |
+| Device tier \ game | bunnymark (Pixi/WebGL) | endless-runner (Phaser/WebGL) | canvasmark (Canvas2D) |
 |---|---|---|---|
-| **High-end** · Huawei Mate30 Pro (Kirin 990 / 8 GB / A12) | ✅ done | ✅ done | 🔜 planned |
+| **High-end** · Huawei Mate30 Pro (Kirin 990 / 8 GB / A12) | ✅ done | ✅ done | ✅ done ⚠️ |
 | **Mid** (~4 GB, to source) | 🔜 | 🔜 | 🔜 |
 | **Low-end** ⭐ (~2–3 GB, to source, GTM wedge) | 🔜 | 🔜 | 🔜 |
 
-> Currently 1 device × 2 games is running; the matrix fills in cell by cell as devices arrive. Each cell yields the metric set below.
-> **Key cross-game finding**: swapping in a heavier, real Phaser game does not shrink Migo's lead — it **widens it sharply** (memory gap 33%→61%, CPU ~2.6×→~7×) — see §3.6.
+> Currently 1 device × 3 games (two render paths: WebGL × 2 + Canvas2D × 1); the matrix fills in cell by cell as devices arrive.
+> **Cross-game finding 1 (WebGL)**: a heavier, real Phaser game does not shrink Migo's lead — it **widens it sharply** (memory 33%→61%, CPU ~2.6×→~7×) — see §3.6.
+> **Cross-game finding 2 (Canvas2D, honest counter-example ⚠️)**: on canvasmark Migo **still wins CPU ~2× and ties fps, but memory is worse** — Migo's Canvas2D path allocates heavily per frame, so memory churns to ~2× WebView. A real Migo optimization target this framework surfaced — see §3.7.
 
 ## 3. Results: Mate30 Pro × bunnymark (100 sprites, 45 s steady)
 
@@ -103,6 +105,38 @@ The second game is a full webpack build of the **Phaser 3** engine (a real mini-
 **Takeaway**: with a heavier, real game Migo's lead **widens rather than shrinks**. Why: **Migo's native runtime cost is nearly game-independent** (146 MB ≈ bunnymark's 147 MB; CPU is even lower here since this game animates fewer objects than 100 bunnies) — a **fixed, low noise floor** — while **WebView's Chromium tax grows with the app** (memory 222→378 MB, CPU stays high). In other words, **the more real and heavy the game, the clearer Migo's advantage** — and real mini-games live in that region, not in toy benchmarks.
 
 > Single-run sample (same basis as bunnymark's CPU/memory); the direction is large and robust, absolute values would tighten with multi-run averaging. endless-runner's fps telemetry uses an **engine-agnostic rAF counter** (identical injected code both sides, `[endless-runner] fps=N`); WebView game-ready fires from an injected `AndroidBench.ready()` first-frame callback, Migo from native onGameReady — this is the **telemetry contract** a new game satisfies to plug into the framework.
+
+## 3.7 Third game: canvasmark (Canvas2D) — the honest counter-example ⚠️
+
+The third game takes a **different rendering path**: pure Canvas 2D (not WebGL). canvasmark is the
+2D analog of bunnymark — N rotating squares per frame via `save/translate/rotate/fillRect` (the
+canvas2d hot path), tap to add, same 100 start. **Good news first: Migo implements Canvas2D
+natively (Skia-backed) — `getContext('2d')` is a real 2D context, rendering at 60 fps** — so the
+"WebView replacement" story covers 2D-canvas games, not only WebGL engines.
+
+| metric | WebView | Migo | read |
+|---|---|---|---|
+| CPU (multi-core) | **173%** | **89%** | **Migo ~half** ✅ (Canvas2D is heavier than WebGL on both, but Migo still halves it) |
+| fps median / 1% low | 60 / 60 | 60 / 58 | tie ✅ |
+| game-ready | 380 ms | 450 ms | WebView ~18% faster |
+| **PSS memory** | **~221 MB (stable)** | **~150–285 MB (churny)** | **⚠️ Migo worse** |
+
+**Counter-example finding (the framework earning its keep)**: on canvasmark **Migo's memory is
+higher and unstable**. At 100 sprites, no interaction, Migo's PSS climbs from ~148 MB to ~285 MB
+(~3 MB/s), then GC pulls it back to ~257 MB — a **sawtooth** between ~150–285 MB — while WebView
+holds a stable ~221 MB. The cause points to **Migo's Canvas2D path allocating too much per frame**
+(command buffer / per-frame surface/snapshot not pooled), driving high GC churn and a doubled
+working set. It is not a permanent leak (GC reclaims), but the memory pressure is real.
+
+**This is exactly what a benchmark is for** — not to cheerlead for Migo, but to honestly find
+**where Migo needs work**. Verdict: **on the WebGL path Migo leads across the board (more so the
+heavier the game); on the Canvas2D path Migo wins CPU and ties fps, but per-frame allocation is a
+real optimization target**. When Migo's 2D allocation is fixed, re-running canvasmark shows the
+memory drop — the regression harness validating the fix (see README "Regression workflow").
+
+> Single-run + a follow-up time series (t=6/20/40/65/90 s → 148/191/249/285/257 MB); the direction
+> (Migo 2D memory higher and churnier) is robust and reproducible. fps telemetry is the game's own
+> rAF counter `[canvasmark] sprites=N fps=M` (same source both sides).
 
 ## 4. Measurement method (system-level, app-agnostic, auditable)
 
