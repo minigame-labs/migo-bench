@@ -1,7 +1,7 @@
 label,runtime,game,device_model,device_brand,android_release,android_sdk,webview_version,migo_version,harness_version,timestamp,fps_source,first_frame_ms,game_ready_ms,cpu_pct,pss_peak_kb,fps_median,fps_1pct_low
-bunnymark_webview,webview,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-12T17:28:11Z,game-telemetry,387,536,125,240875,60,60
-bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:1f57cda,1.0.0,2026-07-12T17:31:10Z,game-telemetry,476,493,48,140826,58,56
-endless-runner_webview,webview,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-12T17:34:03Z,game-telemetry,560,828,128,400404,60,60
-endless-runner_migo,migo,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:1f57cda,1.0.0,2026-07-12T17:37:00Z,game-telemetry,518,658,48,233036,58,56
-canvasmark_webview,webview,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-12T17:39:53Z,game-telemetry,520,523,175,225269,60,60
-canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:1f57cda,1.0.0,2026-07-12T17:42:51Z,game-telemetry,467,469,74,140007,58,57
+bunnymark_webview,webview,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-13T02:38:24Z,game-telemetry,532,697,118,233041,60,60
+bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8b5a704,1.0.0,2026-07-13T02:41:18Z,game-telemetry,466,495,46,135708,58,55
+endless-runner_webview,webview,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-13T02:44:03Z,game-telemetry,385,671,127,391701,60,60
+endless-runner_migo,migo,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8b5a704,1.0.0,2026-07-13T02:46:54Z,game-telemetry,596,710,44,231616,58,55
+canvasmark_webview,webview,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-13T02:49:42Z,game-telemetry,531,517,160,218057,60,60
+canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8b5a704,1.0.0,2026-07-13T02:52:32Z,game-telemetry,460,473,83,121388,58,57

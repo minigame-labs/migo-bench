@@ -30,20 +30,23 @@ public class WebViewBenchActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Which game asset dir to load (default "game"; "game-stress" for the ramp
-        // curve). Read first so we can lock the SAME orientation the Migo shell
-        // derives from the game's game.json deviceOrientation — otherwise the two
-        // runtimes would render a landscape game (endless-runner) at different
-        // dimensions and the comparison stops being like-for-like.
+        // Lock to PORTRAIT for a deterministic, correctly-rendered baseline. The
+        // WebView's Phaser games render correctly in portrait (the landscape
+        // endless-runner is fit-scaled by Phaser's scale manager); in landscape the
+        // WebView leaves the Phaser world off-screen (blank sky) — a browser-side
+        // layout quirk, not present under Migo, whose mini-game runtime honors the
+        // game.json deviceOrientation (landscape) natively. So endless-runner renders
+        // portrait here vs landscape under Migo — different orientation, but BOTH
+        // render the full game at the same pixel budget (this reflects how each
+        // platform genuinely runs a landscape mini-game). Without this lock the
+        // WebView follows the device and can land in the broken landscape state.
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        // Which game asset dir to load (default "game"; "game-stress" for the ramp curve).
         String asset = getIntent().getStringExtra("game_asset");
         if (asset == null || asset.trim().isEmpty()) {
             asset = "game";
         }
-        // bunnymark/canvasmark = portrait; endless-runner = landscape (matches
-        // each game's game.json on the Migo side).
-        setRequestedOrientation(asset.contains("endless-runner")
-                ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         // Keep the screen on during the (up to) 5-minute benchmark run.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
