@@ -13,7 +13,7 @@ Same game, same device, same interaction, on the **Migo native runtime (release)
 - ✅ **Startup: Migo faster** — game-ready (`Fully drawn`) beats WebView on all three (bunnymark 493 vs 536, endless-runner 658 vs 828, canvasmark 469 vs 523 ms).
 - = **fps (normal load): near-tie** — Migo ~58fps vs WebView 60fps (Migo's 1% low slightly lower), consistent across all three.
 - 🎉 **canvasmark memory leak is fixed** — the previous honest counter-example (Canvas2D leaking a GL resource per fill, memory sawtoothing 150–285MB) is **gone** in this build: measured stable at ~104MB over 42s. See §3.7.
-- ⚠️ **Honest regression (heavy-load throughput)** — pushing the synthetic stress test past 20k sprites, **Migo falls behind WebView** (40k: 29 vs 60fps; 100k: 20 vs 31fps). This is the opposite of the previous (debug) baseline — a real issue surfaced by this reliable re-run, most likely the per-frame cost of the R2 command stream / logical-DB render path at very high sprite counts. **Needs profiling + a fix.** See §3.3.
+- ⚠️ **Honest heavy-load finding (throughput)** — pushing the synthetic stress test past 20k sprites, **Migo falls behind WebView** (40k: 29 vs 60fps; 100k: 20 vs 31fps). **Root-caused on-device (see §3.3): the bottleneck is the JS side (V8 running Pixi's per-frame update of 100k sprites) — not rendering/GL, not the command stream.** Migo's native GL command execution is only 5–8ms/frame with perfect batching (6–7 GL commands); the gap is V8 executing heavy per-frame JS ~1.5× slower than Chromium's.
 
 > Note: this is a **high-end** phone (Kirin 990). At normal load Migo leads on most metrics; the GTM wedge is **low-end** devices (small RAM, throttle-prone), where memory/startup gaps should widen — low-end is the key next test (see matrix).
 
@@ -73,8 +73,9 @@ Same game, same device, same interaction, on the **Migo native runtime (release)
 | 220 000 | 12 | 11 | close |
 
 - ≤20k sprites both hold 55–60fps (high-end ceiling). **Past 20k, WebView's Chromium WebGL batching scales better**: at 40k WebView still 60, Migo down to 29. Knee (≥55fps): Migo ~20k, WebView ~40k.
-- **⚠️ This is a regression vs the previous (debug) baseline** — the old version claimed Migo led ~1.9× under load (100k: 32 vs 17). Two independent re-runs this round consistently show the opposite (100k: Migo 20, WebView 31; samples 20/20/20/20/19 — dead stable, not noise).
-- **Most likely cause**: the R2 typed GL command stream's **per-frame serialization of large vertex buffers scaling with sprite count** (100k sprites push ~MB/frame of vertex data through the stream), or extra per-frame cost in the wx-way logical-DB upscale path. **Needs GPU profiling before a fix** (no speculative changes).
+- **⚠️ This differs from the previous (debug) baseline** — the old version claimed Migo led ~1.9× under load (100k: 32 vs 17). Two independent re-runs this round consistently show the opposite (100k: Migo 20, WebView 31; dead stable, not noise). Note: the old "Migo wins stress" was likely an artifact of the pre-wx-fix rendering bug (sprites drawn into only a screen corner), not a true regression.
+- **Root-caused on-device = the JS side, not rendering/command-stream**. Huawei blocks `perf_event` (simpleperf unusable), so we used device-side counters: temporary timing logs in the render thread's GL-batch executor showed that at 100k sprites **Pixi emits only 6–7 GL commands/frame (perfect batching, NOT broken) and native GL execution is only 5–8ms/frame**, yet the whole frame is 49–140ms — the render thread spends most of its time **waiting for the JS thread to produce frames**. Per-thread CPU confirms: **the JS execution thread is pinned ~100%+ while the render thread / GPU / main thread are all low**. So the bottleneck is **Migo's V8 running Pixi's heavy per-frame JS (updating 100k sprite positions + writing vertices) ~1.5× slower than Chromium's V8**. **R2 command-stream execution, the wx-way logical DB, and R3 damage are all ruled out by the evidence.**
+- **Next step**: pinning the exact V8 cause (JIT tiers not fully enabled / GC pauses / JS-side command encoding) needs profiling — blocked on this Huawei device, so **run simpleperf on a non-Huawei device to flame-graph the JS thread**.
 - Real mini-games run at hundreds–thousands of sprites (i.e. "normal load", where Migo's steady-state wins); 20k+ is a synthetic extreme. But this curve is a genuine weakness the framework should surface — not hidden.
 
 ### 3.4 CPU 🏆 Migo
@@ -177,4 +178,4 @@ This round switched to a **release** build and fixed two measurement bugs, so th
 | endless CPU | "~7×" | **~2.7×** | the 7× was a sampling artifact |
 | cross-game memory | "33%→61%, widening" | **consistent ~40%** | the widening narrative doesn't hold |
 | canvasmark memory | Migo worse (leak) | **Migo better (leak fixed)** 🎉 | |
-| stress heavy-load | "Migo ~1.9× stronger" | **⚠️ Migo behind (regression, to fix)** | >20k sprites |
+| stress heavy-load | "Migo ~1.9× stronger" | **⚠️ Migo behind; root cause = JS-side V8 ~1.5× slower on heavy JS (not rendering/command-stream)** | >20k sprites; old value likely a pre-fix render artifact |
