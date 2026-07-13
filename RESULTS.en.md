@@ -22,7 +22,7 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 - ✅ **Startup: Migo mostly faster** — game-ready (`Fully drawn`) bunnymark 495 vs 697, canvasmark 473 vs 517 ms; endless-runner 710 vs 671 (~6% slower, within single-run jitter).
 - = **fps (normal load): near-tie** — Migo ~58 vs WebView 60 (Migo's 1% low slightly lower), consistent across all three.
 - 🎉 **canvasmark Canvas2D memory is good** — the earlier debug build sawtoothed to 285MB here (a per-draw GL-resource leak); this round (release + full-screen rendering) Migo holds a stable 118MB (< WebView's 213MB), leak no longer reproduces.
-- ⚠️🔴 **A regression introduced by the optimizations (honest counter-example)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **A before/after A/B proves this is a real regression from this round's R1/R2/R3**: the pre-optimization ff29aa4, in the same config, is much stronger under stress (40k: 59 vs 30; 100k: 32 vs 19) — the old baseline's stress numbers were real. A three-way isolation pins the culprit to **R1/R3, not R2** (R2 actually partially recovers it). See §3.3, §7.
+- ⚠️🔴 **A regression introduced by the optimizations (honest counter-example)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **A before/after A/B proves this is a real regression from this round's R1/R2/R3**: the pre-optimization ff29aa4, in the same config, is much stronger under stress (40k: 59 vs 30; 100k: 32 vs 19) — the old baseline's stress numbers were real. Per-commit bisection pins the culprit to the **earlier canvas/EGL refactor (#31–#34), not the named R1/R2/R3** (R2/R3 actually recover a chunk). See §3.3, §7.
 
 > Note: high-end phone (Kirin 990). At normal load Migo leads on most metrics; low-end devices (the GTM wedge) should widen the memory/startup gaps — the key next test.
 
@@ -73,9 +73,9 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 | 180 000 | 16 | 14 |
 
 - **A before/after A/B proves this is a real regression introduced by this round's optimizations (NOT a stale rendering artifact)**. Rebuilding the pre-optimization ff29aa4 in the same release config and re-running on device: **ff29aa4's stress is much stronger** (40k: 59 vs 30 now; 100k: **32 vs 19 now**), and ff29aa4's 32@100k matches the older baseline exactly → **the old baseline's "Migo wins stress" was real, and the current version regressed it.**
-- **A three-way isolation proves the culprit is R1/R3, not R2 — R2 actually helps**. Building the pre-R2 commit `6dbb4b4` (has R1/R3, no R2) in release and running stress: at 100k, **PREV (no opt) 32 → preR2 (R1/R3) 14 → NEW (+R2) 19**. So **R1/R3 slashed stress to 14 (the big regression), and R2 pulled it back to 19 (partial recovery)**. All three are JS-bound: per-thread CPU shows **the JS thread ~100% while mali GPU is only 3–5% (idle)** — so the comparison is clean (not confounded by render resolution).
-- **The bottleneck is the JS thread's per-frame work; the big regression came from R1/R3 (the Rendering/refine #36 merge + a batch of perf commits) adding JS-side per-frame overhead** (suspect requestVsync/RAF or damage computation); R2's typed command stream actually reduced JS-side load. Device-side diagnostics (Huawei blocks `perf_event`): at 100k Pixi emits only 6–7 GL commands and the render thread executes in only 5–8ms/frame, yet the whole frame is 49–140ms → the render thread waits for JS.
-- **Next step**: build before/after `Rendering/refine #36` (2f298b5) to pin R1 (vsync) vs R3 (damage) vs the perf commits; fix its JS-side per-frame overhead (keep R2 — it's beneficial) and heavy-load throughput should return to ff29aa4 levels or better.
+- **Per-commit bisection proves the culprit is the earlier canvas/EGL refactor (#31–#34), not the named R1/R2/R3 (R2/R3 actually help)**. Cumulative 100k-fps chain: **ff29aa4 32 → #31–33 (canvas refactor) 19 → #34 (+EGL recovery) 14 → +#36/R1 14 → +R2/R3 (#38) 19**. The big regression happens in #31–34, before R1/R2/R3; R2/R3 recover a chunk (14→19). See §7.
+- **The bottleneck is the JS thread's per-frame work; the #31–34 refactor (canvas2d bypass evaluation, Phaser sub-surface handling, EGL context-loss checks) accumulated fixed per-frame cost**. Device-side diagnostics (Huawei blocks `perf_event`): at 100k Pixi emits only 6–7 GL commands and the render thread executes in only 5–8ms/frame, yet the whole frame is 49–140ms → the render thread waits for JS; all builds mali GPU 3–5% (idle), so JS-bound and not confounded by render resolution.
+- **Next step**: profile the current per-frame JS/render_thread hot path and trim the fixed per-frame cost these refactors left (keep R2/R3 — they help); heavy-load throughput should return to ff29aa4 levels.
 - Real mini-games run at hundreds–thousands of sprites (normal load, where Migo's steady state wins); 20k+ is a synthetic extreme. This curve is a genuine weakness the framework surfaces — not hidden.
 
 ### 3.4 CPU 🏆 Migo
@@ -149,7 +149,7 @@ Baseline `baselines/mate30.csv` (this round: release + rendering fixes); old deb
 | CPU sampling | single 3s window (occasional 6%/18%) | median + screen-wake |
 | memory | "33%→61%, widening" | **consistent ~40–44%** |
 | canvasmark memory | Migo worse (leak) | **Migo better (leak gone, still −44% at full-screen)** 🎉 |
-| stress heavy-load | Migo ~1.9× stronger (**real, not an artifact**) | **⚠️🔴 the optimizations regressed it** (100k 32→19); three-way isolation → culprit is **R1/R3** (pre-R2 build even worse at 14), R2 actually helps. See §7 |
+| stress heavy-load | Migo ~1.9× stronger (**real, not an artifact**) | **⚠️🔴 regressed** (100k 32→19); per-commit bisection → culprit is the **#31–34 canvas/EGL refactor** (not R1/R2/R3; R2/R3 recover a bit). See §7 |
 
 ## 7. Before/after A/B (NEW = 8b5a704 with R1/R2/R3 vs PREV = ff29aa4 pre-optimization, same release config, device, session)
 
@@ -168,13 +168,15 @@ To verify whether this round's optimizations (R1/R2/R3) actually improved perfor
 **Conclusion (honest, mixed)**:
 - ✅ **Faster startup** (2–7%) — R1/snapshot etc. improved cold start.
 - ✅ **canvasmark Canvas2D leak fixed** (297→118MB) — a real, important improvement.
-- 🔴 **Heavy-load throughput regressed, and a three-way isolation pins the culprit to R1/R3 (not R2)**. Building the pre-R2 commit `6dbb4b4` (R1/R3, no R2) and running stress, at 100k:
+- 🔴 **Heavy-load throughput regressed; per-commit bisection proves the culprit is the earlier canvas/EGL refactor (#31–#34), NOT the named R1/R2/R3 (R2/R3 actually help)**. Building several intermediate commits in release and running stress, the 100k-fps chain (cumulative):
 
-| build | 100k fps | note |
+| build (cumulative) | 100k fps | step |
 |---|---|---|
-| PREV (ff29aa4, no R1/R2/R3) | **32** | baseline |
-| preR2 (6dbb4b4, R1/R3, **no R2**) | **14** | 🔴 R1/R3 big regression |
-| NEW (8b5a704, R1/R2/R3) | **19** | R2 partially recovered |
+| ff29aa4 (no optimizations, baseline) | **32** | — |
+| #31–33 (canvas2d-bypass / File-perf / canvas-sub-surface) | **19** | 🔴 −13 (biggest chunk) |
+| #34 (+EGL context-loss recovery) | **14** | 🔴 −5 |
+| 6dbb4b4 (+#36 R1/RAF + perf) | **14** | 0 |
+| 8b5a704 (+R2/R3 #38, all opt) | **19** | ✅ +5 (R2/R3 recover) |
 
-All three are JS-bound (per-thread CPU: JS thread ~100%, mali GPU only 3–5% idle) — not confounded by render resolution. **So R1/R3 (the Rendering/refine #36 merge + perf commits) added the big JS-side regression; R2 actually reduced JS load.** This also **corrects this page's two earlier claims** ("V8 inherently slow / old data was an artifact", then "R2 is the culprit") — both wrong; the culprit is R1/R3.
-- **Net**: at normal load Migo wins across the board, starts faster, and the leak is fixed; but **R1/R3 are a net negative at the 20k+ synthetic extreme**. Next, isolate R1 (vsync) vs R3 (damage) around Rendering/refine #36; fixing its JS-side per-frame overhead (keeping R2, which helps) should restore heavy-load throughput.
+All builds are JS-bound (per-thread CPU: JS thread ~100%, mali GPU only 3–5% idle) — not confounded by render resolution. **The big regression is cumulative and comes from the #31–#34 canvas/EGL refactor (extra per-frame bypass evaluation / sub-surface handling / context-loss checks), not the named R1/R2/R3 optimizations; R2/R3 (#38) actually pull throughput back up.** This also **corrects this page's three earlier claims** ("V8 inherently slow / artifact" → "R2 is the culprit" → "R1/R3 is the culprit") — the real culprit is the #31–34 refactor. (#32 alone can't run the current game.js = snapshot/WebGL-method incompatibility, so #31–33 wasn't split further.)
+- **Net**: at normal load Migo wins across the board, starts faster, and the leak is fixed; but the **#31–34 refactor accumulated per-frame overhead** that hurts at the 20k+ extreme. Next: profile the current per-frame JS/render_thread hot path and trim the fixed per-frame cost these refactors left behind (keep R2/R3 — they help); heavy-load throughput should return to ff29aa4 levels.
