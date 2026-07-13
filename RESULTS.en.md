@@ -1,21 +1,30 @@
 # migo-bench Results
 
 > Chinese is the default; see [RESULTS.md](RESULTS.md). English mirror here.
-> Raw data: `out/results.csv` (steady state), `out/stress_*.csv` (stress curve). Every row carries full provenance (Migo version, device, WebView version, timestamp, `fps_source`).
-> **Methodology change (2026-07 re-run)**: Migo is now built **release** (opt-level "z" + LTO — the shipping config). Previously published numbers were debug (opt-level 0) and are not directly comparable, so this page **supersedes** them. See §6 "Diff vs old".
+> Raw data: `out/results.csv` (steady), `out/stress_*.csv` (stress curve). Every row carries full provenance.
+> **This round (2026-07 re-run)**: Migo is built **release** (opt-z + LTO, the shipping config), superseding the earlier debug numbers. **And two rendering bugs were fixed before re-measuring** (see §0) — the prior version's canvasmark (Migo rendered only 1/9 of the screen) and endless-runner (blank landscape WebView) comparisons were invalid and are superseded by this page.
+
+## 0. Two rendering bugs fixed this round (up front)
+
+A fair comparison requires **both runtimes to render the whole game correctly**. On-device checking this round found and fixed:
+
+1. **Migo canvasmark rendered only the top-left ~1/9 of the screen** (Canvas2D path). Root cause: on a surfaceChanged (status-bar area change) the engine forced the Canvas2D backing to the physical size, but a DPR-naive game reads the canvas size once at init and draws in logical coordinates forever → its drawing lands in a corner of an oversized backing. WebGL games re-read the canvas size every frame so they were unaffected; the earlier wx-way fix only covered WebGL. **Fixed** (migo `fix/canvas2d-onscreen-backing-corner`: preserve the backing's logical-vs-physical choice proportionally across a surface resize) → canvasmark now fills the screen, matching WebView.
+2. **WebView endless-runner rendered blank (only sky) in landscape**. Root cause: the bench forced the WebView to landscape, and the rotation happened after Phaser had sized its canvas, stranding the game world off-screen. **Fixed**: lock the WebView to portrait (a browser runs the game in the device's natural orientation and Phaser fit-scales a landscape game into it). The Migo mini-game runtime honors game.json (landscape) natively — different orientation, but both render the whole game at the same pixel budget.
+
+After the fixes, all three games render full-screen/correctly on both runtimes (verified on device). The numbers below are post-fix.
 
 ## 1. TL;DR
 
-Same game, same device, same interaction, on the **Migo native runtime (release)** vs the **Android System WebView**. Positioning: Migo = the open-source native WebView replacement. **Headline is consistency + auditability + memory/CPU/startup efficiency; fps is a near-tie; and we honestly report one heavy-load regression.**
+Same game, same device, same interaction. **Migo native runtime (release)** vs **Android System WebView**. Positioning: Migo = the open-source native WebView replacement.
 
-- ✅ **Memory: Migo clearly lower, and consistently ~40% across all three games** (bunnymark 138 vs 235, endless-runner 228 vs 391, canvasmark 137 vs 220 MB) — crucial: WebView's rendering runs in a **separate chromium process**, which must be counted for fairness (else ~100MB is missed).
-- ✅ **CPU: Migo ~40% of WebView (~2.4–2.7× less), consistent across all three games** — native GL/Skia is cheaper than the Chromium compositor; also the energy proxy.
-- ✅ **Startup: Migo faster** — game-ready (`Fully drawn`) beats WebView on all three (bunnymark 493 vs 536, endless-runner 658 vs 828, canvasmark 469 vs 523 ms).
-- = **fps (normal load): near-tie** — Migo ~58fps vs WebView 60fps (Migo's 1% low slightly lower), consistent across all three.
-- 🎉 **canvasmark memory leak is fixed** — the previous honest counter-example (Canvas2D leaking a GL resource per fill, memory sawtoothing 150–285MB) is **gone** in this build: measured stable at ~104MB over 42s. See §3.7.
-- ⚠️ **Honest heavy-load finding (throughput)** — pushing the synthetic stress test past 20k sprites, **Migo falls behind WebView** (40k: 29 vs 60fps; 100k: 20 vs 31fps). **Root-caused on-device (see §3.3): the bottleneck is the JS side (V8 running Pixi's per-frame update of 100k sprites) — not rendering/GL, not the command stream.** Migo's native GL command execution is only 5–8ms/frame with perfect batching (6–7 GL commands); the gap is V8 executing heavy per-frame JS ~1.5× slower than Chromium's.
+- ✅ **Memory: Migo clearly lower, consistent ~40–44% across all three** (bunnymark 132 vs 227, endless-runner 226 vs 382, canvasmark 118 vs 212 MB). Fair accounting: WebView counts its separate chromium renderer process (else ~100MB is missed).
+- ✅ **CPU: Migo at half or less of WebView (~1.9–2.9×)** — bunnymark 2.6×, endless-runner 2.9×, canvasmark 1.9×. Native GL/Skia is cheaper than the Chromium compositor; also the energy proxy.
+- ✅ **Startup: Migo mostly faster** — game-ready (`Fully drawn`) bunnymark 495 vs 697, canvasmark 473 vs 517 ms; endless-runner 710 vs 671 (~6% slower, within single-run jitter).
+- = **fps (normal load): near-tie** — Migo ~58 vs WebView 60 (Migo's 1% low slightly lower), consistent across all three.
+- 🎉 **canvasmark Canvas2D memory is good** — the earlier debug build sawtoothed to 285MB here (a per-draw GL-resource leak); this round (release + full-screen rendering) Migo holds a stable 118MB (< WebView's 213MB), leak no longer reproduces.
+- ⚠️ **Honest weakness (heavy-load throughput)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **Root-caused to the JS side** (V8 running Pixi's per-sprite JS for 100k sprites ~1.5× slower than Chromium), not rendering/command-stream. See §3.3.
 
-> Note: this is a **high-end** phone (Kirin 990). At normal load Migo leads on most metrics; the GTM wedge is **low-end** devices (small RAM, throttle-prone), where memory/startup gaps should widen — low-end is the key next test (see matrix).
+> Note: high-end phone (Kirin 990). At normal load Migo leads on most metrics; low-end devices (the GTM wedge) should widen the memory/startup gaps — the key next test.
 
 ## 2. Test matrix (device × game)
 
@@ -25,9 +34,8 @@ Same game, same device, same interaction, on the **Migo native runtime (release)
 | **Mid** (~4G, to buy) | 🔜 | 🔜 | 🔜 |
 | **Low-end** ⭐ (~2-3G, to buy, GTM wedge) | 🔜 | 🔜 | 🔜 |
 
-> 1 device × 3 games done (both render paths: WebGL × 2 + Canvas2D × 1).
-> **Cross-game finding (corrected this round)**: at normal load Migo's lead is **highly consistent across all three games** (memory ~40%, CPU ~2.4–2.7×), NOT "the gap widens as the game gets heavier" as the previous version claimed — that was a CPU-sampling artifact in the old debug baseline (endless CPU mis-recorded as 18%). The real picture: Migo has a **stable low baseline-overhead advantage** at normal load, largely independent of game weight.
-> **Both paths covered**: WebGL (Pixi/Phaser) and Canvas2D (Skia) are both natively implemented in Migo, 60fps — "WebView replacement" is not WebGL-only.
+> 1 device × 3 games (both render paths: WebGL × 2 + Canvas2D × 1), each verified full-screen/correct on device.
+> **Cross-game finding**: at normal load Migo's lead is highly consistent across all three (memory ~40–44%, CPU ~1.9–2.9×) — a stable low baseline-overhead advantage, largely independent of game weight.
 
 ## 3. Results: Mate30 Pro × bunnymark (100 sprites, 60s steady)
 
@@ -35,147 +43,108 @@ Same game, same device, same interaction, on the **Migo native runtime (release)
 
 | metric | WebView | Migo | delta |
 |---|---|---|---|
-| PSS peak | **~235 MB** | **~138 MB** | **Migo ~41% less** |
+| PSS peak | **~227 MB** | **~132 MB** | **Migo ~42% less** |
 
-- **Fair accounting**: WebView = main process + chromium sandboxed renderer (`dumpsys meminfo <pkg>` counts only the main process, missing ~100MB). Migo is **single-process**, all counted.
-- PSS has ±tens-of-MB jitter (GC/system state); multi-run averaging is steadier, direction (Migo clearly lower) is robust.
+- Fair accounting: WebView = main process + chromium sandboxed renderer (`webview_pss.py`). Migo is single-process, all counted.
+- PSS has ±tens-of-MB jitter; the direction (Migo clearly lower) is robust.
 
 ### 3.2 Startup 🏆 Migo
 
-**Game-ready (system `Fully drawn`, first real game frame → `reportFullyDrawn()`, fair):**
-
 | metric | WebView | Migo | |
 |---|---|---|---|
-| game-ready (cool) | 536 ms | 493 ms | Migo ~8% faster |
+| game-ready (`Fully drawn`, cool) | 697 ms | 495 ms | Migo ~29% faster |
 
-- Cool, Migo is already slightly faster (V8 snapshot offsets native init + no Chromium process spawn). Hot/throttled scenarios (low-end + long play) hurt WebView's Chromium cold start more; historically observed >2× slower (to reproduce cool/hot split; this round reports cool only).
-- "First frame (`Displayed`)" fires on WebView's blank window (too early) and Migo has an extra Launcher→Game hop → **use game-ready**.
+- First-frame (`Displayed`) fires on WebView's blank window (too early) and Migo adds a Launcher→Game hop — not comparable; use game-ready.
+- Absolute values have thermal jitter (WebView 697 this round vs 536 last, device warmer); Migo's snapshot restore is steadier (495 ≈ 493).
 
-### 3.3 fps: normal near-tie; heavy-load ⚠️ Migo behind (to fix)
+### 3.3 fps: normal near-tie; heavy-load ⚠️ Migo behind (root cause = JS side)
 
-**Normal load (100 sprites):**
+**Normal load (100 sprites)**: fps median WebView 60 / Migo 58; 1% low 60 / 55.
 
-| metric | WebView | Migo |
-|---|---|---|
-| fps median | 60 | 58 |
-| 1% low | 60 | 56 |
+**Stress curve (in-game deterministic ramp, `--scenario stress`) — ⚠️ Migo behind past 20k sprites**:
 
-**Stress curve (in-game deterministic ramp to 220k sprites, `--scenario stress`) — ⚠️ Migo falls behind past 20k sprites**:
+| sprites | WebView fps | Migo fps |
+|---:|---:|---:|
+| ≤20 000 | 60 | 48–58 |
+| 40 000 | 60 | 30 |
+| 70 000 | 43 | 28 |
+| 100 000 | 32 | 19 |
+| 140 000 | 23 | 19 |
+| 180 000 | 16 | 14 |
 
-| sprites | WebView fps | Migo fps | |
-|---:|---:|---:|:---|
-| ≤20 000 | 60 | 55–58 | tie |
-| **40 000** | **60** | **29** | WebView ahead |
-| **70 000** | 41 | 28 | WebView ahead |
-| **100 000** | 31 | 20 | WebView ahead |
-| 140 000 | 23 | 19 | WebView ahead |
-| 180 000 | 15 | 14 | close |
-| 220 000 | 12 | 11 | close |
-
-- ≤20k sprites both hold 55–60fps (high-end ceiling). **Past 20k, WebView's Chromium WebGL batching scales better**: at 40k WebView still 60, Migo down to 29. Knee (≥55fps): Migo ~20k, WebView ~40k.
-- **⚠️ This differs from the previous (debug) baseline** — the old version claimed Migo led ~1.9× under load (100k: 32 vs 17). Two independent re-runs this round consistently show the opposite (100k: Migo 20, WebView 31; dead stable, not noise). Note: the old "Migo wins stress" was likely an artifact of the pre-wx-fix rendering bug (sprites drawn into only a screen corner), not a true regression.
-- **Root-caused on-device = the JS side, not rendering/command-stream**. Huawei blocks `perf_event` (simpleperf unusable), so we used device-side counters: temporary timing logs in the render thread's GL-batch executor showed that at 100k sprites **Pixi emits only 6–7 GL commands/frame (perfect batching, NOT broken) and native GL execution is only 5–8ms/frame**, yet the whole frame is 49–140ms — the render thread spends most of its time **waiting for the JS thread to produce frames**. Per-thread CPU confirms: **the JS execution thread is pinned ~100%+ while the render thread / GPU / main thread are all low**. So the bottleneck is **Migo's V8 running Pixi's heavy per-frame JS (updating 100k sprite positions + writing vertices) ~1.5× slower than Chromium's V8**. **R2 command-stream execution, the wx-way logical DB, and R3 damage are all ruled out by the evidence.**
-- **Next step**: pinning the exact V8 cause (JIT tiers not fully enabled / GC pauses / JS-side command encoding) needs profiling — blocked on this Huawei device, so **run simpleperf on a non-Huawei device to flame-graph the JS thread**.
-- Real mini-games run at hundreds–thousands of sprites (i.e. "normal load", where Migo's steady-state wins); 20k+ is a synthetic extreme. But this curve is a genuine weakness the framework should surface — not hidden.
+- **Root-caused on-device = the JS side, not rendering/command-stream**. Huawei blocks `perf_event` (simpleperf unusable), so we used device-side counters: temporary timing in the render thread's GL-batch executor showed that at 100k sprites **Pixi emits only 6–7 GL commands/frame (perfect batching) and native GL execution is only 5–8ms/frame**, yet the whole frame is 49–140ms — the render thread mostly **waits for the JS thread to produce frames**. Per-thread CPU: **the JS thread is pinned ~100%+ while the render thread / GPU / main thread are low**. So the bottleneck is **Migo's V8 running Pixi's heavy per-frame JS (updating 100k sprites) ~1.5× slower than Chromium's**. R2 command-stream execution, the wx-way logical DB, and R3 damage are all ruled out by the evidence.
+- **Next step**: pin the exact V8 cause via profiling on a non-Huawei device (Huawei blocks `perf_event`).
+- Real mini-games run at hundreds–thousands of sprites (normal load, where Migo's steady state wins); 20k+ is a synthetic extreme. This curve is a genuine weakness the framework surfaces — not hidden.
 
 ### 3.4 CPU 🏆 Migo
 
 | metric | WebView | Migo | delta |
 |---|---|---|---|
-| CPU (multi-core, may exceed 100%) | **~125%** | **~48%** | **Migo ~2.6× less** |
+| CPU (multi-core) | **~118%** | **~46%** | **Migo ~2.6× less** |
 
-- Method: `/proc/<pid>/stat` (utime+stime) delta; WebView counts main + chromium renderer (same as memory).
-- Sampling is now **screen-wake + median of multiple windows** (see §4) — the previous single-window method occasionally mis-recorded Migo as 6% (landing on the idle window right after fps capture); fixed this round.
-- At equal fps, Migo's CPU is about half → lower power (see energy).
+- Method: `/proc/<pid>/stat` (utime+stime) delta, WebView includes the renderer. Median of multiple windows + screen-wake before sampling (rejects the occasional bad window).
 
 ### 3.5 Energy (proxy)
 
-Direct on-device energy is constrained here: this EMUI device **disables the fuel gauge** (`current_now` unreadable) and the **per-uid batterystats energy model is unavailable**, plus USB power masks battery drain. **CPU utilization is the energy proxy** (at fixed fps, CPU is the main energy driver) → Migo lower.
-Real energy pending: ①non-Huawei device (open fuel gauge) ②unplugged run + charge delta ③external power meter.
+EMUI disables the fuel gauge + per-uid batterystats + USB power masks drain → CPU is the energy proxy (at fixed fps, CPU is the main driver) → Migo lower. Real energy pending a non-Huawei device / unplugged run / external meter.
 
-## 3.6 Second game: endless-runner (Phaser) — lead matches bunnymark
-
-Second game is a full webpack build of **Phaser 3** (a real mini-game, not a synthetic benchmark), same device/method, 60s steady, landscape (both sides locked to game.json `landscape` for a like-for-like frame):
+## 3.6 Second game: endless-runner (Phaser)
 
 | metric | WebView | Migo | delta |
 |---|---|---|---|
-| **PSS peak** | **~391 MB** | **~228 MB** | **Migo ~42% less** |
-| **CPU (multi-core)** | **~128%** | **~48%** | **Migo ~2.7× less** |
-| game-ready (`Fully drawn`) | 828 ms | 658 ms | **Migo ~21% faster** |
-| fps median / 1% low | 60 / 60 | 58 / 56 | near-tie |
-| fps source | game-telemetry | game-telemetry | same both sides (EMUI blocks SurfaceFlinger) |
+| PSS peak | **~382 MB** | **~226 MB** | **Migo ~41% less** |
+| CPU (multi-core) | **~127%** | **~44%** | **Migo ~2.9× less** |
+| game-ready | 671 ms | 710 ms | ~6% slower (within jitter) |
+| fps median / 1% low | 60 / 60 | 58 / 55 | near-tie |
 
-**Cross-game:**
+WebView portrait fit-scale, Migo native landscape (see §0) — both render the whole game at the same pixel budget.
 
-| metric | bunnymark (Pixi) | endless-runner (Phaser) | canvasmark (Canvas2D) |
-|---|---|---|---|
-| Memory (Migo/WebView) | 138/235 → −41% | 228/391 → −42% | 137/220 → −38% |
-| CPU | 48/125 → 2.6× | 48/128 → 2.7× | 74/175 → 2.4× |
-| game-ready | 493/536 | 658/828 | 469/523 |
-| fps | 58/60 | 58/60 | 58/60 |
+## 3.7 Third game: canvasmark (Canvas2D) — the real comparison, after fixing a rendering bug
 
-**Conclusion (corrected)**: at normal load, Migo's lead is **highly consistent across all three games** (memory ~40%, CPU ~2.4–2.7×, faster startup, near-tie fps). This comes from a **stable low baseline overhead** in the Migo native runtime; WebView's Chromium tax is always higher. The previous claim that "the gap widens from 33% to 61% memory and up to 7× CPU as the game gets heavier" **does not hold** — that was a one-off CPU sampling artifact in the old debug baseline for endless-runner (mis-recorded 18%, same family as the fixed 6%); reliable re-runs give a consistent ~40% / ~2.5×.
-
-> Single-run sampling (same method as bunnymark); the directional gap is robust; absolute values are steadier when averaged. endless-runner fps telemetry = an engine-agnostic rAF counter (identical code injected both sides, `[endless-runner] fps=N`); WebView's game-ready fires via the injected `AndroidBench.ready()` first-frame callback, Migo's via native onGameReady — the **telemetry contract** a new game must satisfy to join this framework.
-
-## 3.7 Third game: canvasmark (Canvas2D) — the previous counter-example is fixed 🎉
-
-Third game exercises a **different render path**: pure Canvas 2D (not WebGL). canvasmark is the 2D version of bunnymark — each frame `save/translate/rotate/fillRect` draws N rotating squares, tap adds sprites, 100 to start. **Migo natively implements Canvas2D (Skia-backed); `getContext('2d')` is a real 2D context, 60fps.**
+Canvas2D path (not WebGL). **This round fixed the Migo Canvas2D "only 1/9 of the screen" bug (see §0)**, so both now render full-screen and the numbers are comparable:
 
 | metric | WebView | Migo | reading |
 |---|---|---|---|
-| **PSS memory** | **~220 MB (stable)** | **~137 MB (stable, measured ~104MB flat)** | **Migo ~38% less ✅** |
-| CPU (multi-core) | **175%** | **74%** | **Migo ~2.4× less** ✅ (Canvas2D is heavier than WebGL both sides; Migo still saves >half) |
+| **PSS memory** | **~213 MB (stable)** | **~118 MB (stable)** | **Migo ~44% less ✅** |
+| CPU (multi-core) | **160%** | **83%** | **Migo ~1.9× less** ✅ (smaller than the earlier corner-rendering 2.4× = honest now that Migo renders the full canvas; Canvas2D is heavier than WebGL both sides) |
 | fps median / 1% low | 60 / 60 | 58 / 57 | near-tie ✅ |
-| game-ready | 523 ms | 469 ms | **Migo ~10% faster** ✅ |
+| game-ready | 517 ms | 473 ms | Migo ~9% faster ✅ |
 
-**The previous counter-example is fixed 🎉**: in the old debug build Migo's memory here was **higher and unstable** — PSS sawtoothed between ~150–285MB, root-caused (via this framework's bisection) to **Canvas2D leaking ~400 bytes of locked GL resource per fill draw**. **This release re-run shows the leak gone**: Migo canvasmark memory measured stable at ~104MB over 42s (per-6s samples: 103/103/103/103/103/104/103 MB, no sawtooth, no growth), and the 137MB PSS peak is well below WebView's 220MB. The R2/R3/release path resolved this per-draw GPU resource leak.
-
-> This is the framework's value: the previous version honestly reported the counter-example, and this round faithfully verifies it was fixed (the point of README "Regression workflow"). fps stays ~58–60. fps telemetry = the game's rAF counter `[canvasmark] sprites=N fps=M` (same both sides).
+**The memory leak no longer reproduces**: the earlier debug build sawtoothed to ~285MB here (a locked GL resource leaked per Canvas2D fill); this round (release + full-screen rendering) Migo holds a stable 118MB, well below WebView's 213MB. fps stays ~58.
 
 ## 4. Measurement method (system-level, app-agnostic, auditable)
 
-- **Memory**: `dumpsys meminfo`; WebView sums main + `:sandboxed_process` (`webview_pss.py`).
-- **Startup**: system `am` `Displayed` (first frame) + `reportFullyDrawn`/`Fully drawn` (game-ready); no app-log parsing.
-- **fps**: prefer `dumpsys SurfaceFlinger --latency` (compositor present timestamps, app-agnostic); **this EMUI device blocks it (all zeros)**, so fall back to the game's own fps telemetry (same code both sides, symmetric), each row records `fps_source`. Non-Huawei devices use SurfaceFlinger.
-- **CPU**: `/proc/<pid>/stat` (utime+stime) delta (WebView includes the renderer). **Median of 3 short windows, with a screen-wake before sampling** — a single 3s window occasionally lands on the idle/stall moment right after fps capture and reads absurdly low (once mis-recorded Migo at ~6%); the median rejects that outlier.
-- **Stress**: in-game deterministic sprite ramp (Pixi ticker, identical both sides; `make-stress-game.sh`), fps vs sprite count.
-- **Orientation parity**: both shells lock orientation to each game's `game.json` `deviceOrientation` (bunnymark/canvasmark portrait, endless-runner landscape) — otherwise one portrait vs one landscape renders different dimensions and isn't comparable.
-- **Stability guard**: force screen-on before capture (`svc power stayon`) — a slept screen stops the activity → zero frames/data.
-- **Startup-time parsing**: ActivityManager's `Displayed/Fully drawn` is `+868ms` under 1s but `+1s43ms` at ≥1s — parse s/m units or slow starts are dropped.
-- **Thermal note**: Kirin 990 throttles when hot. Within a run both sides are measured **back-to-back with per-game cooldown** (this round stayed 29–35°C); relative comparison is fair, absolute values need a cool reproduction.
+- **Memory**: `dumpsys meminfo`; WebView sums main + `:sandboxed_process`.
+- **Startup**: system `am` `Displayed` + `Fully drawn`; no app-log parsing.
+- **fps**: prefer SurfaceFlinger `--latency`; this EMUI device blocks it (all zeros) → fall back to the game's rAF telemetry (same both sides), each row records `fps_source`.
+- **CPU**: `/proc/<pid>/stat` delta (WebView includes the renderer); **median of multiple windows + screen-wake before sampling** (a single window occasionally reads absurdly low).
+- **Stress**: in-game deterministic sprite ramp (Pixi ticker, identical both sides).
+- **Orientation**: WebView locked portrait (renders correctly); Migo per game.json (endless = landscape) — both render the whole game at the same pixel budget (see §0).
+- **Stability**: force screen-on (`svc power stayon`) before capture.
+- **Thermal**: Kirin 990 throttles when hot; both sides measured back-to-back with per-game cooldown (this round 32–35°C); relative comparison is fair, absolute values need a cool reproduction.
 
 ## 5. Reproduce
 
 ```bash
 export PATH=$PATH:$ANDROID_HOME/platform-tools
-# Migo uses a release AAR (shipping config):
-#   scripts/build-aar.sh release arm64-v8a   (in the migo repo; the bench needs an
-#   extendable public API, so release requires temporarily disabling library minify)
-# Steady:
+# Migo release AAR (shipping config; the bench needs an extendable API so release
+# requires temporarily disabling library minify): scripts/build-aar.sh release arm64-v8a
 bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 --migo-aar local:.../migo-release.aar
-# Stress curve:
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
-```
-
-```bash
-# Compare / regression gate (Migo vs WebView table · or new Migo vs baseline):
 python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
-python3 scripts/compare.py --results out/results.csv --baseline baselines/mate30.csv --game bunnymark
 ```
 
-Migo version is pinnable: `--migo-aar local:PATH | release-tag:TAG | sha:SHA` — every result is tied to an exact Migo version (auditable). Baselines live in `baselines/` (updated to release this round); the old debug baseline is backed up at `baselines/mate30.debug-ff29aa4.bak.csv`.
+Baseline `baselines/mate30.csv` (this round: release + rendering fixes); old debug baseline backed up at `baselines/mate30.debug-ff29aa4.bak.csv`.
 
 ## 6. Diff vs old version (debug / ff29aa4)
 
-This round switched to a **release** build and fixed two measurement bugs, so the numbers supersede the old ones:
-
-| item | old (debug) | this round (release, reliable) | note |
-|---|---|---|---|
-| build | debug (opt-level 0) | **release (opt-z + LTO, shipping)** | debug machine code isn't optimized → distorted perf |
-| CPU sampling | single 3s window | **median + screen-wake** | old method mis-recorded 6%/18% |
-| endless CPU | "~7×" | **~2.7×** | the 7× was a sampling artifact |
-| cross-game memory | "33%→61%, widening" | **consistent ~40%** | the widening narrative doesn't hold |
-| canvasmark memory | Migo worse (leak) | **Migo better (leak fixed)** 🎉 | |
-| stress heavy-load | "Migo ~1.9× stronger" | **⚠️ Migo behind; root cause = JS-side V8 ~1.5× slower on heavy JS (not rendering/command-stream)** | >20k sprites; old value likely a pre-fix render artifact |
+| item | old (debug) | this round (release, rendering fixed) |
+|---|---|---|
+| build | debug (opt-0, distorted) | **release (opt-z + LTO, shipping)** |
+| canvasmark rendering | Migo drew only 1/9 of the screen (unnoticed) | **fixed = full-screen, comparison now valid**; CPU 2.4×→**1.9×** (honest) |
+| endless-runner WebView | forced landscape = blank | **locked portrait = renders correctly** |
+| CPU sampling | single 3s window (occasional 6%/18%) | median + screen-wake |
+| memory | "33%→61%, widening" | **consistent ~40–44%** |
+| canvasmark memory | Migo worse (leak) | **Migo better (leak gone, still −44% at full-screen)** 🎉 |
+| stress heavy-load | "Migo ~1.9× stronger" | **⚠️ Migo behind; root cause = JS-side V8 ~1.5× slower (not rendering/command-stream)** |
