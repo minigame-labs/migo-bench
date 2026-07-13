@@ -2,6 +2,7 @@ package com.migo.bench.webview;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
@@ -28,6 +29,21 @@ public class WebViewBenchActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Which game asset dir to load (default "game"; "game-stress" for the ramp
+        // curve). Read first so we can lock the SAME orientation the Migo shell
+        // derives from the game's game.json deviceOrientation — otherwise the two
+        // runtimes would render a landscape game (endless-runner) at different
+        // dimensions and the comparison stops being like-for-like.
+        String asset = getIntent().getStringExtra("game_asset");
+        if (asset == null || asset.trim().isEmpty()) {
+            asset = "game";
+        }
+        // bunnymark/canvasmark = portrait; endless-runner = landscape (matches
+        // each game's game.json on the Migo side).
+        setRequestedOrientation(asset.contains("endless-runner")
+                ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         // Keep the screen on during the (up to) 5-minute benchmark run.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -75,11 +91,6 @@ public class WebViewBenchActivity extends Activity {
         // dumpsys gfxinfo sees real frame timing (matches Migo's GPU path).
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-        // Which game asset dir to load (default "game"; "game-stress" for the ramp curve).
-        String asset = getIntent().getStringExtra("game_asset");
-        if (asset == null || asset.trim().isEmpty()) {
-            asset = "game";
-        }
         webView.loadUrl("file:///android_asset/" + asset + "/index.html");
     }
 
