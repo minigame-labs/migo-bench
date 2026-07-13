@@ -12,9 +12,10 @@ runtime that replaces the WebView" positioning.
 
 **[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
-TL;DR on Mate30 Pro × bunnymark: **memory Migo ~33% less · CPU ~half · under heavy load Migo ~1.9× fps · startup ~par cool / ~2.4× faster when throttled · fps tie at normal load.**
-And the payoff finding — on the heavier, **real Phaser game** endless-runner the gaps **widen**: **memory Migo ~61% less · CPU ~1/7 · game-ready ~par · fps tie.** Migo's native cost is near-fixed; WebView's Chromium tax grows with the app, so heavier/more-real games favour Migo more.
-The honest counter-example — **canvasmark (Canvas2D path)**: Migo still wins CPU (~half) and ties fps, but **memory is worse** (~150–285 MB churn vs WebView's stable ~221 MB) — a per-draw GPU-resource leak in Migo's Canvas2D path (bisected to ~400 B of locked GL memory per fill draw) that this framework surfaced. A benchmark that only ever flatters its sponsor isn't credible; this one reports where Migo loses too.
+> Numbers below are from the **2026-07 re-run** on a **release** Migo build (opt-z + LTO, the shipping config). Earlier published numbers were debug (opt-level 0) and are superseded — see RESULTS §6.
+TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D): **memory Migo ~40% less · CPU ~2.4–2.7× less · game-ready faster · fps near-tie (~58 vs 60) at normal load.** Migo's native runtime carries a stable low baseline overhead; WebView's Chromium tax is always higher.
+🎉 **canvasmark's memory leak is fixed** — the previous counter-example (a per-draw GPU-resource leak, ~150–285 MB churn) is gone: Migo now holds a stable ~104 MB, below WebView's ~220 MB.
+⚠️ **Honest regression** — under the synthetic stress ramp, past ~20k sprites Migo now **falls behind** WebView (40k: 29 vs 60fps; 100k: 20 vs 31fps), the opposite of the old debug baseline. Likely the R2 command-stream / logical-DB path's per-frame cost at extreme sprite counts; needs profiling. A benchmark that only ever flatters its sponsor isn't credible; this one reports where Migo loses too.
 
 ## What it measures (and the honest weighting)
 
@@ -66,7 +67,7 @@ python3 scripts/parse.py --header-only > out/results.csv
 bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3
 # Migo (pin a version: local dev AAR, a release tag, or a git sha):
 bash scripts/run.sh --runtime migo --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 \
-     --migo-aar local:$HOME/wkspace/migo/platforms/android/dist/migo-debug.aar
+     --migo-aar local:$HOME/wkspace/migo/platforms/android/dist/migo-release.aar
 column -t -s, out/results.csv
 ```
 
