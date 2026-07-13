@@ -22,7 +22,7 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 - ✅ **Startup: Migo mostly faster** — game-ready (`Fully drawn`) bunnymark 495 vs 697, canvasmark 473 vs 517 ms; endless-runner 710 vs 671 (~6% slower, within single-run jitter).
 - = **fps (normal load): near-tie** — Migo ~58 vs WebView 60 (Migo's 1% low slightly lower), consistent across all three.
 - 🎉 **canvasmark Canvas2D memory is good** — the earlier debug build sawtoothed to 285MB here (a per-draw GL-resource leak); this round (release + full-screen rendering) Migo holds a stable 118MB (< WebView's 213MB), leak no longer reproduces.
-- ⚠️ **Honest weakness (heavy-load throughput)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **Root-caused to the JS side** (V8 running Pixi's per-sprite JS for 100k sprites ~1.5× slower than Chromium), not rendering/command-stream. See §3.3.
+- ⚠️🔴 **A regression introduced by the optimizations (honest counter-example)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **A before/after A/B proves this is a real regression from this round's R1/R2/R3**: the pre-optimization ff29aa4, in the same config, is much stronger under stress (40k: 59 vs 30; 100k: 32 vs 19) — the old baseline's stress numbers were real. The bottleneck is the JS side; the likely culprit is R2's JS-side per-frame command-stream encoding. See §3.3, §7.
 
 > Note: high-end phone (Kirin 990). At normal load Migo leads on most metrics; low-end devices (the GTM wedge) should widen the memory/startup gaps — the key next test.
 
@@ -72,8 +72,9 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 | 140 000 | 23 | 19 |
 | 180 000 | 16 | 14 |
 
-- **Root-caused on-device = the JS side, not rendering/command-stream**. Huawei blocks `perf_event` (simpleperf unusable), so we used device-side counters: temporary timing in the render thread's GL-batch executor showed that at 100k sprites **Pixi emits only 6–7 GL commands/frame (perfect batching) and native GL execution is only 5–8ms/frame**, yet the whole frame is 49–140ms — the render thread mostly **waits for the JS thread to produce frames**. Per-thread CPU: **the JS thread is pinned ~100%+ while the render thread / GPU / main thread are low**. So the bottleneck is **Migo's V8 running Pixi's heavy per-frame JS (updating 100k sprites) ~1.5× slower than Chromium's**. R2 command-stream execution, the wx-way logical DB, and R3 damage are all ruled out by the evidence.
-- **Next step**: pin the exact V8 cause via profiling on a non-Huawei device (Huawei blocks `perf_event`).
+- **A before/after A/B proves this is a real regression introduced by this round's optimizations (NOT a stale rendering artifact)**. Rebuilding the pre-optimization ff29aa4 in the same release config and re-running on device: **ff29aa4's stress is much stronger** (40k: 59 vs 30 now; 100k: **32 vs 19 now**), and ff29aa4's 32@100k matches the older baseline exactly → **the old baseline's "Migo wins stress" was real, and the current version regressed it.**
+- **The bottleneck is the JS side; the likely culprit is R2's typed command stream's per-frame JS-side encoding**. Device-side diagnostics (Huawei blocks `perf_event`): at 100k sprites **Pixi emits only 6–7 GL commands and the render thread executes in only 5–8ms/frame**, yet the whole frame is 49–140ms → the render thread mostly **waits for the JS thread**; per-thread CPU shows **the JS thread pinned ~100%+**. R2 makes every GL call first encode into the typed command stream on the JS thread (most likely copying the large `bufferSubData` vertex data — ~MB/frame — into the stream); ff29aa4 has no R2 and calls GL natively, so its JS thread is lighter and faster. Render-side R2 execution, the wx-way logical DB, and R3 damage are all ruled out (none is the bottleneck).
+- **Next step**: revert R1/R2/R3 individually to pin which one (the A/B proves the net effect is a regression, R2 the prime suspect); or profile the JS thread on a non-Huawei device.
 - Real mini-games run at hundreds–thousands of sprites (normal load, where Migo's steady state wins); 20k+ is a synthetic extreme. This curve is a genuine weakness the framework surfaces — not hidden.
 
 ### 3.4 CPU 🏆 Migo
@@ -147,4 +148,24 @@ Baseline `baselines/mate30.csv` (this round: release + rendering fixes); old deb
 | CPU sampling | single 3s window (occasional 6%/18%) | median + screen-wake |
 | memory | "33%→61%, widening" | **consistent ~40–44%** |
 | canvasmark memory | Migo worse (leak) | **Migo better (leak gone, still −44% at full-screen)** 🎉 |
-| stress heavy-load | "Migo ~1.9× stronger" | **⚠️ Migo behind; root cause = JS-side V8 ~1.5× slower (not rendering/command-stream)** |
+| stress heavy-load | Migo ~1.9× stronger (**real, not an artifact**) | **⚠️🔴 the optimizations regressed it** (40k 59→30, 100k 32→19); JS-side bottleneck, likely R2's JS-side command encoding. See §7 |
+
+## 7. Before/after A/B (NEW = 8b5a704 with R1/R2/R3 vs PREV = ff29aa4 pre-optimization, same release config, device, session)
+
+To verify whether this round's optimizations (R1/R2/R3) actually improved performance, the pre-optimization ff29aa4 was rebuilt in the **same release config** and re-run on device. **Confound**: ff29aa4 lacks this round's rendering fixes, so all three games render into a corner (less work) → CPU/memory are not directly comparable; **only startup (cold start) and stress (JS-bound) are rendering-area-independent and comparable.**
+
+| metric | NEW (optimized) | PREV (pre-opt ff29aa4) | verdict |
+|---|---|---|---|
+| startup bunnymark | 495 ms | 516 ms | ✅ NEW 4% faster (comparable) |
+| startup endless | 710 ms | 763 ms | ✅ NEW 7% faster (comparable) |
+| startup canvasmark | 473 ms | 481 ms | ✅ NEW 2% faster (comparable) |
+| canvasmark PSS | **118 MB** | **297 MB** | ✅ NEW fixed the Canvas2D leak (297→118) |
+| **stress 40k fps** | **30** | **59** | 🔴 **PREV ~2× faster (regression)** |
+| **stress 100k fps** | **19** | **32** | 🔴 **PREV ~1.7× faster (regression)** |
+| CPU / other memory | — | — | ⚠️ rendering-area confounded, omitted |
+
+**Conclusion (honest, mixed)**:
+- ✅ **Faster startup** (2–7%) — R1/snapshot etc. improved cold start.
+- ✅ **canvasmark Canvas2D leak fixed** (297→118MB) — a real, important improvement.
+- 🔴 **Heavy-load throughput regressed** — pre-optimization ff29aa4 is clearly stronger under stress (fps nearly doubles at 40k). This is a **real regression** introduced by this round's optimizations (most likely R2's typed command stream's JS-side per-frame encoding). It also **corrects this page's earlier claim** that stress was "V8 inherently slow / the old data was a rendering artifact" — the A/B proves the old baseline was real and the regression is optimization-caused.
+- **Net**: at normal load (hundreds–thousands of sprites) Migo wins across the board, starts faster, and the leak is fixed; but the optimizations are a **net negative at the 20k+ synthetic extreme** — the R2 JS-side encoding path (avoid re-copying the large per-frame vertex buffer) needs another pass.
