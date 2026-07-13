@@ -85,21 +85,38 @@ _amtime_ms() {
   python3 -c "import re,sys;t=sys.argv[1];u={'h':3600000,'m':60000,'s':1000,'ms':1};print(sum(int(v)*u[x] for v,x in re.findall(r'(\d+)(ms|s|m|h)',t)))" "$1"
 }
 
-# capture_cpu <pkg> [renderer_match]  -> prints app CPU% (multi-core, may exceed 100)
-#   measured as a /proc/<pid>/stat (utime+stime) delta over ~3s. For WebView pass
-#   "sandboxed_process" so the chromium renderer's CPU is summed in (fair — same
-#   reason the renderer's PSS is summed).
-capture_cpu() {
-  local pkg="$1" rmatch="${2:-}" clk pids p v t0=0 t1=0
+# _cpu_once <pkg> <renderer_match> <window_s>  -> one CPU% sample over <window_s>.
+#   Re-resolves pids each call (a single dumpsys/SF stall or a momentarily idle
+#   window must not poison the reading).
+_cpu_once() {
+  local pkg="$1" rmatch="$2" win="$3" clk pids p v t0=0 t1=0
   clk=$("${ADB[@]}" shell getconf CLK_TCK | tr -d '\r'); clk=${clk:-100}
   pids=$("${ADB[@]}" shell pidof "$pkg" 2>/dev/null | tr -d '\r')
   if [ -n "$rmatch" ]; then
     pids="$pids $("${ADB[@]}" shell "ps -A -o PID,ARGS 2>/dev/null | grep -i '$rmatch' | grep -v grep | awk '{print \$1}'" | tr -d '\r')"
   fi
   for p in $pids; do v=$("${ADB[@]}" shell "cat /proc/$p/stat 2>/dev/null" | awk '{print $14+$15}'); t0=$((t0 + ${v:-0})); done
-  sleep 3
+  sleep "$win"
   for p in $pids; do v=$("${ADB[@]}" shell "cat /proc/$p/stat 2>/dev/null" | awk '{print $14+$15}'); t1=$((t1 + ${v:-0})); done
-  awk "BEGIN{printf \"%.0f\", ($t1-$t0)/$clk/3*100}"
+  awk "BEGIN{printf \"%.0f\", ($t1-$t0)/$clk/$win*100}"
+}
+
+# capture_cpu <pkg> [renderer_match]  -> prints app CPU% (multi-core, may exceed 100)
+#   /proc/<pid>/stat (utime+stime) delta. For WebView pass "sandboxed_process" so
+#   the chromium renderer's CPU is summed in (fair — same reason the renderer's
+#   PSS is summed).
+#   Robustness: a SINGLE 3s window occasionally reads absurdly low (~6%) when it
+#   lands on a stalled/idle moment (observed on Migo right after the 60s fps
+#   capture's SurfaceFlinger queries). We keep the screen awake and take the
+#   MEDIAN of 3 windows over ~6s of active rendering, which rejects that outlier.
+capture_cpu() {
+  local pkg="$1" rmatch="${2:-}" a b c
+  "${ADB[@]}" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+  "${ADB[@]}" shell svc power stayon true >/dev/null 2>&1 || true
+  a=$(_cpu_once "$pkg" "$rmatch" 2)
+  b=$(_cpu_once "$pkg" "$rmatch" 2)
+  c=$(_cpu_once "$pkg" "$rmatch" 2)
+  printf '%s\n%s\n%s\n' "$a" "$b" "$c" | sort -n | sed -n '2p'
 }
 
 # game_ready_ms <pkg> <displayed_activity> <launch_activity> <runs>

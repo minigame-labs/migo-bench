@@ -32,12 +32,37 @@ public class LauncherActivity extends Activity {
             asset = "game";
         }
         deployGame(asset);
-        RuntimeConfig cfg = new RuntimeConfig.Builder(this)
+        // Honor the game's declared orientation (game.json `deviceOrientation`)
+        // so landscape games (e.g. the Phaser endless-runner) rotate the
+        // activity to landscape before the surface is created. The runtime
+        // then boots against the correctly-sized surface.
+        RuntimeConfig.Builder builder = new RuntimeConfig.Builder(this)
                 .setDebugEnabled(true)
-                .setCodeSigningEnabled(false)
-                .build();
-        BenchGameActivity.launch(this, GAME_ID, ENTRY, cfg);
+                .setCodeSigningEnabled(false);
+        String orientation = readGameOrientation(asset);
+        if (orientation != null) {
+            builder.setStartupOrientation(orientation);
+            Log.i(TAG, "startup orientation from game.json: " + orientation);
+        }
+        BenchGameActivity.launch(this, GAME_ID, ENTRY, builder.build());
         finish();
+    }
+
+    // Read `deviceOrientation` ("landscape"/"portrait") from the game's game.json.
+    private String readGameOrientation(String asset) {
+        try (InputStream in = getAssets().open(asset + "/game.json")) {
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
+            String json = bos.toString("UTF-8").trim();
+            if (json.isEmpty()) return null;
+            String o = new org.json.JSONObject(json).optString("deviceOrientation", "");
+            if ("landscape".equals(o) || "portrait".equals(o)) return o;
+        } catch (Exception e) {
+            Log.w(TAG, "could not read game.json orientation for " + asset + ": " + e);
+        }
+        return null;
     }
 
     // Copy assets/<asset>/{game.js,game.json} -> filesDir/migo/games/bench/code/.
