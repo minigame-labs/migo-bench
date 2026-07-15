@@ -22,7 +22,7 @@
 - ✅ **启动:Migo 多数更快**——游戏就绪(`Fully drawn`)bunnymark 495 vs 697、canvasmark 473 vs 517 ms;endless-runner 710 vs 671(略慢 ~6%,单轮抖动范围内)。
 - = **帧率(常规负载):近乎打平**——Migo ~58 vs WebView 60fps(Migo 1% low 略低),三款一致。
 - 🎉 **canvasmark 的 Canvas2D 内存表现好**——上一版(debug)这里 Migo 内存锯齿到 285MB(一个 per-draw GL 资源泄漏);本轮 release + 满屏渲染下 Migo 稳定 118MB(< WebView 213MB),泄漏已不复现。
-- ⚠️🔴 **优化引入的重载回归(诚实反例)**——合成压力拉到 2 万精灵以上,Migo 落后 WebView(10 万处 19 vs 32fps)。**"优化前后"A/B 证实这是本轮 R1/R2/R3 优化本身造成的真回归**:优化前的 ff29aa4 在同配置下 stress 明显更强(40k:59 vs 30;100k:32 vs 19),旧基线的 stress 数字是真的。逐 commit 二分定位:**真元凶是更早的 canvas/EGL 重构(#31–#34)累积的每帧开销,不是命名的 R1/R2/R3——R2/R3 反而挽回一截**。见 §3.3、§7。
+- ✅ **重载压测已回到 WebView parity(2026-07-15,#40 修复)**——曾出现的 stress 回归(10 万处一度 19 vs 32fps)已定位并修复。二分确认元凶是 `4b69dbb`(#36 R1 的 demand-driven RAF,让 compute 线程每帧 block 在 eventfd 上 → 利用率低 → Kirin990 governor 把大核压在 1546MHz),**`4cf93b8`(#40)让 active-animation 期间 RAF free-run 修复**。控温复验(冷却门卡到同温 34.997°C、逐秒三 cluster 频率采样、各跑 2 次):Migo #40 全曲线与 WebView 打平、高载略胜(**100k 32 vs 31、180k 18 vs 15**),两次一致。详见 **§8**。
 
 > 注意:高端机(麒麟 990)。常规负载多数指标 Migo 占优;低端机(GTM 楔子)内存/启动差距预计更大——下一步核心测试。
 
@@ -57,11 +57,13 @@
 - 口径:游戏首个真实帧 → `reportFullyDrawn()`。首帧(`Displayed`)对 WebView 是空白窗口先绘制、偏早,两侧不可比,以"游戏就绪"为准。
 - 绝对值有热抖动(本轮 WebView 697 比上轮 536 慢,设备偏热);Migo 快照恢复更稳(495 ≈ 493)。
 
-### 3.3 帧率:常规打平;重载 ⚠️ Migo 落后(根因=JS 侧)
+### 3.3 帧率:常规打平;重载曾回归、**已由 #40 修复**(根因=JS 线程频率)
+
+> **✅ 更新(2026-07-15)**:本节记录的重载回归**已由 #40(`4cf93b8`)修复,stress 现与 WebView 全曲线打平**(100k 32 vs 31)。以下为**修复前**的记录与根因二分,保留作历史;当前控温复验数据见 **§8**。
 
 **常规负载(100 精灵)**:fps 中位 WebView 60 / Migo 58;1% low 60 / 55。
 
-**压力曲线(游戏内确定性 ramp,`--scenario stress`)—— ⚠️ >2 万精灵 Migo 落后**:
+**压力曲线(游戏内确定性 ramp,`--scenario stress`)—— 以下为 #40 修复前的记录(>2 万精灵 Migo 曾落后)**:
 
 | 精灵数 | WebView fps | Migo fps |
 |---:|---:|---:|
@@ -136,6 +138,9 @@ bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --durat
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 --migo-aar local:.../migo-release.aar
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
 python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+
+# 控温 stress A/B(冷却门到同温冷态 + 三 cluster 频率采样 + 各跑 2 次;见 §8):
+bash scripts/stress-ab.sh <SERIAL> <path/to/migo-release.aar>
 ```
 
 基线快照 `baselines/mate30.csv`(本轮 release + 渲染修复);旧 debug 基线备份 `baselines/mate30.debug-ff29aa4.bak.csv`。
@@ -150,7 +155,7 @@ python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webvi
 | CPU 采样 | 单 3s 窗口(偶发 6%/18%) | 中位数 + 唤醒屏幕 |
 | 内存 | "33%→61% 递增" | **一致 ~40–44%** |
 | canvasmark 内存 | Migo 更差(泄漏) | **Migo 更好(泄漏不复现,满屏下仍 −44%)** 🎉 |
-| 重载 stress | Migo ~1.9× 强(**真实,非伪数**) | **⚠️🔴 退步了**(100k 32→19);逐 commit 二分:元凶=**#31–34 canvas/EGL 重构**(非 R1/R2/R3;R2/R3 反而挽回)。见 §7 |
+| 重载 stress | Migo ~1.9× 强(**真实,非伪数**) | 曾退步(100k 32→19),**已由 #40 修复回 parity**(100k 32 vs webview 31)。元凶=`4b69dbb`(#36 R1 demand-RAF),#40 free-run RAF 修复。见 §8 |
 
 ## 7. 优化前后 A/B(NEW=8b5a704 含 R1/R2/R3 vs PREV=ff29aa4 优化前,同 release 配置、同设备、同 session)
 
@@ -181,3 +186,30 @@ python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webvi
 
 所有版本逐线程 CPU 都是 **JS 线程 ~100%、mali GPU 仅 3–5%(空闲)** → 都 JS 绑定、渲染分辨率不混淆。**结论:大回归是累积的、来自 #31–#34 的 canvas/EGL 重构(每帧多做了 bypass 评估/子表面处理/上下文丢失检查等),不是被命名的 R1/R2/R3 优化;R2/R3(#38)反而把吞吐拉回一截。** 这也**订正了本页更早三版**("V8 天生慢/伪数"→"R2 元凶"→"R1/R3 元凶")的错误——最终真元凶是 #31–34 重构。(#32 单独一版跑不了当前 game.js=快照/WebGL 方法不兼容,#31-33 未能再细分。)
 - **净评价**:常规负载 Migo 全面赢、启动更快、泄漏已修;但 **#31–34 重构在 2 万+ 精灵极限压测下累积了每帧开销**。下一步:直接 profile 当前版本的每帧 JS/render_thread 热路径,削掉这几处重构留下的每帧固定开销(R2/R3 保留,它们有益),重载吞吐可望回到 ff29aa4 水平。
+
+> **后续(见 §8):§7 的方向大体对(重构改动确实压低了重载吞吐),但精确元凶不是 #31–34 而是 #36 的 `4b69dbb`(demand-driven RAF),已由 #40 修复到 WebView parity。**
+
+## 8. ✅ 重载回归已修复:#40 恢复 WebView parity(2026-07-15 控温复验)
+
+§3.3 / §6 / §7 记录的 stress 重载回归**已定位并修复**。
+
+**精确元凶 = `4b69dbb`(#36 R1,"demand-driven vsync/RAF")**。它给 RAF 加了严格的 1:1 demand-latch:compute 线程(bench 里跑 JS+native 的游戏线程)每帧 block 在 eventfd 上等下一个 vsync。中等负载(4–10 万)下它 <100% 忙 → Kirin990 的 util-driven governor 把大核压在 **1546MHz**(而非 2861)→ 同样的 JS 慢 ~1.8× → 掉帧,形成"慢→等→低利用率→低频→更慢"的恶性循环。(§7 早先归因 #31–34 是方向近似、但不精确;逐 commit 二分坐实是 4b69dbb。)
+
+**修复 = `4cf93b8`(#40,已合入 master)**:active-animation 期间让 RAF **free-run**(per-session 常量 ticket + 每个 scheduled vsync 无条件 signal),compute 线程不再逐帧 block → 利用率回到 ~100% → governor 升到 2861MHz,恢复 #36 之前的行为。代价是让出 on-demand vsync 的 idle 省电,但 warm window 之后仍恢复 idle-stop(纯待机功耗不变)。
+
+**控温复验方法**(本页方法学的严格版,消除本 SoC 的头号 confound=负载相关的热节流):master `4cf93b8` 重建 release / full / arm64(临时关 library minify 绕 R8 继承坑)。两 runtime 各用**冷却门**卡到**同温 34.997°C** 冷态起步(`soc_thermal ≤ 35°C` 且 `cpu7 scaling_max` 已恢复满频 2861MHz 才开跑)、逐秒采样**三个 cluster** 的频率 + SoC 温度、每 case 结束 `force-stop`、**各跑 2 次**。
+
+| 精灵数 | WebView (r1/r2) | Migo #40 (r1/r2) | Migo/WebView |
+|---:|---:|---:|---:|
+| 40 000 | 60 / 60 | 58 / 59 | 0.97× |
+| 70 000 | 41 / 43 | 45 / 45 | 1.07× |
+| 100 000 | 31 / 31 | 32 / 32 | 1.03× |
+| 140 000 | 22 / 22 | 23 / 23 | 1.05× |
+| 180 000 | 15 / 16 | 18 / 17 | 1.13× |
+| 220 000 | 13 / 13 | 13 / 13 | 1.00× |
+
+knee(≥55fps)两边都是 **40 000**。**Migo #40 全曲线与 WebView 打平、高载略胜,两次运行一致**(对比 #40 前 100k 一度 19fps → 现 32fps)。
+
+**parity 是真实的,不是热假象**:220k 同为 13fps 时,WebView 把大 cluster(cpu6/7)钉在 **2855MHz(几乎满频、未被节流)** 却只追平 Migo;而 Migo 把工作**摊到三个 cluster**(大 2072 / 中 1752 / 小 1202,多线程 render/upload/JS 分核)且**更凉**(tail SoC 62.4 vs WebView 66.1°C)。→ #40 前"频率归一化后 Migo ~1.4× 更多每帧 CPU 工作"的判断**不再成立**;Migo 现在同温甚至更凉下达成同 fps。(跨核数的"总工作量"不可精确对比,此为方向性结论。)
+
+**复现**:`scripts/stress-ab.sh <SERIAL> <path/to/migo-release.aar>`(内置冷却门 + 三 cluster 频率采样 + 各跑 2 次,末尾打印曲线)。
