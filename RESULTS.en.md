@@ -22,7 +22,7 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 - ✅ **Startup: Migo mostly faster** — game-ready (`Fully drawn`) bunnymark 495 vs 697, canvasmark 473 vs 517 ms; endless-runner 710 vs 671 (~6% slower, within single-run jitter).
 - = **fps (normal load): near-tie** — Migo ~58 vs WebView 60 (Migo's 1% low slightly lower), consistent across all three.
 - 🎉 **canvasmark Canvas2D memory is good** — the earlier debug build sawtoothed to 285MB here (a per-draw GL-resource leak); this round (release + full-screen rendering) Migo holds a stable 118MB (< WebView's 213MB), leak no longer reproduces.
-- ⚠️🔴 **A regression introduced by the optimizations (honest counter-example)** — under the synthetic stress ramp past 20k sprites Migo falls behind WebView (100k: 19 vs 32fps). **A before/after A/B proves this is a real regression from this round's R1/R2/R3**: the pre-optimization ff29aa4, in the same config, is much stronger under stress (40k: 59 vs 30; 100k: 32 vs 19) — the old baseline's stress numbers were real. Per-commit bisection pins the culprit to the **earlier canvas/EGL refactor (#31–#34), not the named R1/R2/R3** (R2/R3 actually recover a chunk). See §3.3, §7.
+- ✅ **Heavy-load stress back at WebView parity (2026-07-15, fixed by #40)** — the stress regression (100k once 19 vs 32fps) has been located and fixed. Bisection pins the culprit to `4b69dbb` (#36 R1's demand-driven RAF: the compute thread blocks on an eventfd every frame → low utilization → the Kirin990 governor holds the big core at 1546MHz); `4cf93b8` (#40) fixes it by free-running RAF during active animation. Temperature-controlled re-validation (cold-gated to an identical 34.997°C start, per-second all-3-cluster freq sampling, each runtime run twice): Migo #40 ties WebView across the whole curve and edges ahead at high load (**100k 32 vs 31, 180k 18 vs 15**), reproduced twice. See **§8**.
 
 > Note: high-end phone (Kirin 990). At normal load Migo leads on most metrics; low-end devices (the GTM wedge) should widen the memory/startup gaps — the key next test.
 
@@ -57,11 +57,13 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 - First-frame (`Displayed`) fires on WebView's blank window (too early) and Migo adds a Launcher→Game hop — not comparable; use game-ready.
 - Absolute values have thermal jitter (WebView 697 this round vs 536 last, device warmer); Migo's snapshot restore is steadier (495 ≈ 493).
 
-### 3.3 fps: normal near-tie; heavy-load ⚠️ Migo behind (root cause = JS side)
+### 3.3 fps: normal near-tie; heavy-load regressed then **fixed by #40** (root cause = JS thread frequency)
+
+> **✅ Update (2026-07-15)**: the heavy-load regression documented in this section is **fixed by #40 (`4cf93b8`); stress now ties WebView across the whole curve** (100k 32 vs 31). The following is the **pre-fix** record and root-cause bisection, kept as history; current temperature-controlled data is in **§8**.
 
 **Normal load (100 sprites)**: fps median WebView 60 / Migo 58; 1% low 60 / 55.
 
-**Stress curve (in-game deterministic ramp, `--scenario stress`) — ⚠️ Migo behind past 20k sprites**:
+**Stress curve (in-game deterministic ramp, `--scenario stress`) — pre-#40 record (Migo was behind past 20k sprites)**:
 
 | sprites | WebView fps | Migo fps |
 |---:|---:|---:|
@@ -135,6 +137,10 @@ bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --durat
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 --migo-aar local:.../migo-release.aar
 bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
 python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+
+# Temperature-controlled stress A/B (cold-gates both runtimes to an identical cool
+# start + samples all 3 clusters' freq + runs each twice; see §8):
+bash scripts/stress-ab.sh <SERIAL> <path/to/migo-release.aar>
 ```
 
 Baseline `baselines/mate30.csv` (this round: release + rendering fixes); old debug baseline backed up at `baselines/mate30.debug-ff29aa4.bak.csv`.
@@ -149,7 +155,7 @@ Baseline `baselines/mate30.csv` (this round: release + rendering fixes); old deb
 | CPU sampling | single 3s window (occasional 6%/18%) | median + screen-wake |
 | memory | "33%→61%, widening" | **consistent ~40–44%** |
 | canvasmark memory | Migo worse (leak) | **Migo better (leak gone, still −44% at full-screen)** 🎉 |
-| stress heavy-load | Migo ~1.9× stronger (**real, not an artifact**) | **⚠️🔴 regressed** (100k 32→19); per-commit bisection → culprit is the **#31–34 canvas/EGL refactor** (not R1/R2/R3; R2/R3 recover a bit). See §7 |
+| stress heavy-load | Migo ~1.9× stronger (**real, not an artifact**) | regressed (100k 32→19), **fixed by #40 back to parity** (100k 32 vs webview 31). Culprit = `4b69dbb` (#36 R1 demand-RAF); #40 free-run RAF fixes it. See §8 |
 
 ## 7. Before/after A/B (NEW = 8b5a704 with R1/R2/R3 vs PREV = ff29aa4 pre-optimization, same release config, device, session)
 
@@ -180,3 +186,30 @@ To verify whether this round's optimizations (R1/R2/R3) actually improved perfor
 
 All builds are JS-bound (per-thread CPU: JS thread ~100%, mali GPU only 3–5% idle) — not confounded by render resolution. **The big regression is cumulative and comes from the #31–#34 canvas/EGL refactor (extra per-frame bypass evaluation / sub-surface handling / context-loss checks), not the named R1/R2/R3 optimizations; R2/R3 (#38) actually pull throughput back up.** This also **corrects this page's three earlier claims** ("V8 inherently slow / artifact" → "R2 is the culprit" → "R1/R3 is the culprit") — the real culprit is the #31–34 refactor. (#32 alone can't run the current game.js = snapshot/WebGL-method incompatibility, so #31–33 wasn't split further.)
 - **Net**: at normal load Migo wins across the board, starts faster, and the leak is fixed; but the **#31–34 refactor accumulated per-frame overhead** that hurts at the 20k+ extreme. Next: profile the current per-frame JS/render_thread hot path and trim the fixed per-frame cost these refactors left behind (keep R2/R3 — they help); heavy-load throughput should return to ff29aa4 levels.
+
+> **Follow-up (see §8): §7's direction was broadly right (the refactors did depress heavy-load throughput), but the precise culprit was not #31–34 — it was #36's `4b69dbb` (demand-driven RAF), now fixed by #40 back to WebView parity.**
+
+## 8. ✅ Heavy-load regression fixed: #40 restores WebView parity (2026-07-15, temperature-controlled)
+
+The stress regression documented in §3.3 / §6 / §7 has been **located and fixed**.
+
+**Precise culprit = `4b69dbb` (#36 R1, "demand-driven vsync/RAF")**. It added a strict 1:1 demand-latch to RAF: the compute thread (the game thread that runs JS+native in the bench) blocks on an eventfd every frame waiting for the next vsync. At moderate load (40–100k) it's <100% busy → the Kirin990 util-driven governor holds the big core at **1546MHz** (instead of 2861) → the same JS runs ~1.8× slower → dropped frames, a "slower→wait→low-util→low-freq→slower" vicious cycle. (§7's attribution to #31–34 was directionally close but imprecise; per-commit bisection nails it to 4b69dbb.)
+
+**Fix = `4cf93b8` (#40, merged to master)**: during active animation let RAF **free-run** (a per-session-constant ticket + signal on every scheduled vsync unconditionally), so the compute thread no longer blocks per frame → utilization returns to ~100% → the governor ramps to 2861MHz, restoring the pre-#36 behavior. The cost is giving up the on-demand-vsync idle-power win, but after the warm window it still returns to idle-stop (idle power unchanged).
+
+**Method** (the strict version of this page's methodology, removing this SoC's #1 confound = load-dependent thermal throttling): master `4cf93b8` rebuilt release / full / arm64 (library minify temporarily off to dodge the R8 inheritance gotcha). Both runtimes are **cold-gated** to an identical **34.997°C** start (`soc_thermal ≤ 35°C` AND `cpu7 scaling_max` back to full 2861MHz before launch), all-**3-cluster** freq + SoC temp sampled per second, `force-stop` after each case, **each runtime run twice**.
+
+| sprites | WebView (r1/r2) | Migo #40 (r1/r2) | Migo/WebView |
+|---:|---:|---:|---:|
+| 40 000 | 60 / 60 | 58 / 59 | 0.97× |
+| 70 000 | 41 / 43 | 45 / 45 | 1.07× |
+| 100 000 | 31 / 31 | 32 / 32 | 1.03× |
+| 140 000 | 22 / 22 | 23 / 23 | 1.05× |
+| 180 000 | 15 / 16 | 18 / 17 | 1.13× |
+| 220 000 | 13 / 13 | 13 / 13 | 1.00× |
+
+knee (≥55fps) is **40 000** on both. **Migo #40 ties WebView across the whole curve and edges ahead at high load, reproduced twice** (vs 100k once 19fps before #40 → 32fps now).
+
+**Parity is genuine, not a thermal artifact**: at 220k (both 13fps) WebView pins the big cluster (cpu6/7) at **2855MHz (near max, NOT throttled)** yet only ties Migo; meanwhile Migo **spreads work across all three clusters** (big 2072 / mid 1752 / little 1202 — multi-threaded render/upload/JS on separate cores) and runs **cooler** (tail SoC 62.4 vs WebView 66.1°C). → the pre-#40 "freq-normalized ~1.4× more per-frame CPU work" no longer holds; Migo now reaches equal fps at equal-or-lower temperature. (Cross-core-count "total work" isn't precisely comparable; this is a directional claim.)
+
+**Reproduce**: `scripts/stress-ab.sh <SERIAL> <path/to/migo-release.aar>` (built-in cold gate + 3-cluster freq sampling + two runs each, prints the curves).
