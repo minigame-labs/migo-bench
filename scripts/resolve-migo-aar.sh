@@ -19,7 +19,17 @@ case "$spec" in
     ;;
   release-tag:*)
     tag="${spec#release-tag:}"
-    gh release download "$tag" -R minigame-labs/migo -p '*.aar' -O "$dest" --clobber
+    # Releases ship one AAR per ABI (migo-runtime-<v>-full-<abi>.aar). Pick the
+    # asset matching the target device's ABI so the single -O download is
+    # unambiguous (a bare '*.aar' would match multiple assets and fail).
+    adbc=(adb); [ -n "${SERIAL:-}" ] && adbc=(adb -s "$SERIAL")
+    abi="$("${adbc[@]}" shell getprop ro.product.cpu.abi 2>/dev/null | tr -d '\r\n ')"
+    case "$abi" in
+      arm64*)        pat='*arm64*' ;;
+      x86_64|x86-64) pat='*x86_64*' ;;
+      *) echo "ERROR: cannot pick release AAR for device ABI '${abi:-<undetected>}' (need arm64-v8a or x86_64; is the device connected and SERIAL set?)" >&2; exit 2 ;;
+    esac
+    gh release download "$tag" -R minigame-labs/migo -p "$pat" -O "$dest" --clobber
     echo "$tag"
     ;;
   sha:*)
