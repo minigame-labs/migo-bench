@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="410" viewBox="0 0 960 410" font-family="system-ui,-apple-system,Segoe UI,sans-serif">
+<text x="24" y="30" font-size="20" font-weight="700" fill="#ffffff">Migo vs Android System WebView</text>
+<text x="24" y="50" font-size="12.5" fill="#c3c2b7">Same game, same device (Mate30 Pro), same script - lower is better on all three.</text>
+<rect x="704" y="20" width="12" height="12" rx="3" fill="#8f8d86"/>
+<text x="722" y="30" font-size="12.5" fill="#c3c2b7">WebView</text>
+<rect x="800" y="20" width="12" height="12" rx="3" fill="#3987e5"/>
+<text x="818" y="30" font-size="12.5" font-weight="600" fill="#ffffff">Migo</text>
+<text x="24.0" y="84" font-size="15" font-weight="700" fill="#ffffff">Memory</text>
+<text x="309" y="84" font-size="11.5" text-anchor="end" fill="#898781">MB PSS</text>
+<text x="24.0" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo ~42% less</text>
+<line x1="24.0" y1="354" x2="309.3333333333333" y2="354" stroke="#383835" stroke-width="1"/>
+<rect x="43.6" y="235.2" width="26" height="118.8" rx="4" fill="#8f8d86"/>
+<text x="56.6" y="229.2" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">227</text>
+<rect x="73.6" y="284.9" width="26" height="69.1" rx="4" fill="#3987e5"/>
+<text x="86.6" y="278.9" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">132</text>
+<text x="71.6" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
+<rect x="138.7" y="154.0" width="26" height="200.0" rx="4" fill="#8f8d86"/>
+<text x="151.7" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">382</text>
+<rect x="168.7" y="235.7" width="26" height="118.3" rx="4" fill="#3987e5"/>
+<text x="181.7" y="229.7" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">226</text>
+<text x="166.7" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
+<rect x="233.8" y="242.5" width="26" height="111.5" rx="4" fill="#8f8d86"/>
+<text x="246.8" y="236.5" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">213</text>
+<rect x="263.8" y="292.2" width="26" height="61.8" rx="4" fill="#3987e5"/>
+<text x="276.8" y="286.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">118</text>
+<text x="261.8" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
+<text x="337.3333333333333" y="84" font-size="15" font-weight="700" fill="#ffffff">CPU</text>
+<text x="623" y="84" font-size="11.5" text-anchor="end" fill="#898781">% multi-core</text>
+<text x="337.3333333333333" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo ~2x less</text>
+<line x1="337.3333333333333" y1="354" x2="622.6666666666666" y2="354" stroke="#383835" stroke-width="1"/>
+<rect x="356.9" y="206.5" width="26" height="147.5" rx="4" fill="#8f8d86"/>
+<text x="369.9" y="200.5" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">118</text>
+<rect x="386.9" y="296.5" width="26" height="57.5" rx="4" fill="#3987e5"/>
+<text x="399.9" y="290.5" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">46</text>
+<text x="384.9" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
+<rect x="452.0" y="195.2" width="26" height="158.8" rx="4" fill="#8f8d86"/>
+<text x="465.0" y="189.2" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">127</text>
+<rect x="482.0" y="299.0" width="26" height="55.0" rx="4" fill="#3987e5"/>
+<text x="495.0" y="293.0" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">44</text>
+<text x="480.0" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
+<rect x="547.1" y="154.0" width="26" height="200.0" rx="4" fill="#8f8d86"/>
+<text x="560.1" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">160</text>
+<rect x="577.1" y="250.2" width="26" height="103.8" rx="4" fill="#3987e5"/>
+<text x="590.1" y="244.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">83</text>
+<text x="575.1" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
+<text x="650.6666666666666" y="84" font-size="15" font-weight="700" fill="#ffffff">Startup</text>
+<text x="936" y="84" font-size="11.5" text-anchor="end" fill="#898781">ms to game-ready</text>
+<text x="650.6666666666666" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo faster (2 of 3)</text>
+<line x1="650.6666666666666" y1="354" x2="936.0" y2="354" stroke="#383835" stroke-width="1"/>
+<rect x="670.2" y="157.7" width="26" height="196.3" rx="4" fill="#8f8d86"/>
+<text x="683.2" y="151.7" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">697</text>
+<rect x="700.2" y="214.6" width="26" height="139.4" rx="4" fill="#3987e5"/>
+<text x="713.2" y="208.6" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">495</text>
+<text x="698.2" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
+<rect x="765.3" y="165.0" width="26" height="189.0" rx="4" fill="#8f8d86"/>
+<text x="778.3" y="159.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">671</text>
+<rect x="795.3" y="154.0" width="26" height="200.0" rx="4" fill="#3987e5"/>
+<text x="808.3" y="148.0" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">710</text>
+<text x="793.3" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
+<rect x="860.4" y="208.4" width="26" height="145.6" rx="4" fill="#8f8d86"/>
+<text x="873.4" y="202.4" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">517</text>
+<rect x="890.4" y="220.8" width="26" height="133.2" rx="4" fill="#3987e5"/>
+<text x="903.4" y="214.8" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">473</text>
+<text x="888.4" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
+<text x="24" y="394" font-size="11" fill="#898781">fps ties (~58 vs 60) and heavy-load stress is at parity as of #40 - see RESULTS.</text>
+</svg>

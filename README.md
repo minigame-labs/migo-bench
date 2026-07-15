@@ -4,6 +4,15 @@ Reproducible **Migo vs Android System WebView** benchmarks — the same game, sa
 same interaction script, on both runtimes. The evidence behind Migo's "open-source native
 runtime that replaces the WebView" positioning.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
+  <img alt="Migo vs Android System WebView across three games: memory ~42% lower, CPU ~2x lower, startup faster; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+</picture>
+
+<sub>Mate30 Pro · release build · 3 games (Pixi/WebGL, Phaser/WebGL, Canvas2D) · every bar traces to a pinned Migo version. Full per-metric tables → **[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)**.</sub>
+
+> **Status — Migo is pre-release.** This repo is the public, auditable evidence trail. A runnable Migo AAR (so you can reproduce every number yourself with `--migo-aar release-tag:…`) ships with the Migo release. ⭐ **Star / Watch** to get pinged when it lands.
+
 > This repo is both a **showcase** (adopters/skeptics can re-run it) and a **regression
 > harness** (every Migo optimization/fix re-runs the same comparison against a baseline).
 > A credible, reproducible benchmark *is* the marketing artifact — credibility is the sell.
@@ -15,7 +24,7 @@ device × game matrix + per-metric tables (memory, startup, fps + stress curve, 
 > Numbers below are from the **2026-07 re-run** on a **release** Migo build (opt-z + LTO, the shipping config), **after fixing two rendering bugs** (Migo Canvas2D rendered only 1/9 of the screen; WebView endless-runner was blank in landscape) — see RESULTS §0/§6. Earlier published numbers are superseded.
 TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo ~40–44% less · CPU ~1.9–2.9× less · game-ready mostly faster · fps near-tie (~58 vs 60) at normal load.**
 🎉 **canvasmark's Canvas2D memory leak no longer reproduces** — the earlier debug build sawtoothed to ~285 MB here; this round Migo holds a stable ~118 MB (< WebView's ~213 MB), even rendering the full screen.
-⚠️🔴 **A regression the optimizations introduced (honest counter-example)** — under the synthetic stress ramp, past ~20k sprites Migo **falls behind** WebView (100k: 19 vs 32fps). A **before/after A/B** (rebuilding the pre-optimization ff29aa4 in the same config) proves this is a **real regression from this round's R1/R2/R3**: pre-opt ff29aa4 is much stronger under stress (40k: 59 vs 30; 100k: 32 vs 19) — the old baseline was real, not a rendering artifact. Per-commit bisection pins the culprit to the **earlier canvas/EGL refactor (#31–#34), NOT the named R1/R2/R3** — the chain at 100k is ff29aa4 32 → #31–33 19 → #34 14 → +R1 14 → +R2/R3 19 (R2/R3 actually recover a bit). All builds are JS-bound (mali GPU 3–5%). Meanwhile the changes **did** improve startup (2–7%) and fixed a Canvas2D memory leak (297→118 MB) — see RESULTS §7. A benchmark that only ever flatters its sponsor isn't credible; this one reports where Migo regressed too.
+✅ **Stress parity, restored the honest way** — a heavy-load regression *did* appear mid-development (past ~20k sprites Migo once trailed WebView, 100k 19 vs 32fps). We bisected it to a specific commit (`4b69dbb`, an on-demand-RAF change that let the compute thread's clock sag), fixed it in **#40**, and **re-validated under temperature control** (both runtimes cold-gated to an identical start, per-second CPU-frequency logging, two runs each): Migo #40 now **ties WebView across the whole ramp and edges ahead at high load** (100k 32 vs 31, 180k 18 vs 15) — and does it at a *lower* big-core frequency and temperature, so the parity is real, not a thermal artifact. See RESULTS §8. We leave the full regression-and-fix trail visible on purpose: a benchmark that hides its sponsor's stumbles isn't credible.
 
 ## What it measures (and the honest weighting)
 
@@ -84,8 +93,9 @@ bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --scena
 
 A deterministic **in-game sprite ramp** (2k→220k, 5 s per stage — Pixi-ticker based, identical
 both sides; `scripts/make-stress-game.sh` generates it from the normal bundle) drives the load
-while the harness records `bunnies=N fps=M`. fps is plotted against N. Past ~20k the curves
-diverge (native-GL Migo scales ~1.9× better under heavy load) — see RESULTS §3.3.
+while the harness records `bunnies=N fps=M`. fps is plotted against N. As of #40 the two
+curves track each other across the whole ramp (Migo at parity, edging ahead at high load) —
+see RESULTS §8. `scripts/stress-ab.sh` runs this cold-gated with per-cluster frequency logging.
 
 ## Regression workflow — compare against a baseline
 
