@@ -5,3 +5,11 @@ endless-runner_webview,webview,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.
 endless-runner_migo,migo,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8b5a704,1.0.0,2026-07-13T02:46:54Z,game-telemetry,596,710,44,231616,58,55
 canvasmark_webview,webview,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-07-13T02:49:42Z,game-telemetry,531,517,160,218057,60,60
 canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8b5a704,1.0.0,2026-07-13T02:52:32Z,game-telemetry,460,473,83,121388,58,57
+bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:f4dfa9a,1.0.0,2026-07-18T01:22:45Z,game-telemetry,844,535,57,147905,58,57
+bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:27824b1,1.0.0,2026-07-18T04:16:49Z,game-telemetry,527,558,56,147499,58,54
+bunnymark_migo,migo,bunnymark,Android SDK built for x86_64,google,10,29,(com.google.android.webview; 147.0.7727.137),local:3923890,1.0.0,2026-07-23T00:49:50Z,game-telemetry,947,651,24,,60,59
+canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:8e850f2,1.0.0,2026-07-23T16:00:46Z,game-telemetry,1083,502,105,129250,58,57
+bunnymark_migo,migo,bunnymark,Android SDK built for x86_64,Android,8.0.0,26,(com.android.chrome; 69.0.3497.100),local:35b83cb,1.0.0,2026-07-23T19:05:05Z,game-telemetry,,,0,,,
+bunnymark_migo,migo,bunnymark,Android SDK built for x86_64,Android,8.0.0,26,(com.android.chrome; 69.0.3497.100),local:35b83cb,1.0.0,2026-07-23T19:12:47Z,game-telemetry,,,77,,7,0
+bunnymark_webview,webview,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-08-15T04:57:32Z,game-telemetry,382,538,120,260682,60,60
+bunnymark_migo,migo,bunnymark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:c4a13be,1.0.0,2026-08-15T05:00:40Z,game-telemetry,484,499,45,145478,58,56
