@@ -119,3 +119,8 @@ push — real-device capture stays local (a hosted runner has no phone).
 
 The harness takes `--migo-aar <release-tag | local:PATH | sha>` so a WIP fix benches against a
 local dev AAR and published numbers pin a release tag. Every result stamps the resolved version.
+
+## Contact
+
+- Commercial licensing: licensing@minigame-labs.com
+- Security reports: see [SECURITY.md](SECURITY.md)
