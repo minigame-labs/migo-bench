@@ -8,8 +8,10 @@ fps stays a near-tie, same as the other two games: see [RESULTS.md](../../RESULT
 
 ## Payloads (`dist/`)
 
-- `game.js` — Migo build: migo-adapter prelude + the Phaser engine bundle, self-contained
-  (loaded by `migo-shell` as the game entry point).
+- `game.js` — Migo build: [migo-web-adapter](https://github.com/minigame-labs/migo-web-adapter)
+  prelude + the Phaser engine bundle (`main.<hash>.js`), self-contained (loaded by `migo-shell`
+  as the game entry point). Regenerate the same way as canvasmark's `game.js` (see its README),
+  using `main.<hash>.js` in place of `game.bundle.js`.
 - `index.html` + `main.<hash>.js` — browser build for `webview-shell` (`index.html` loads
   the Phaser bundle). `main.<hash>.js.LICENSE.txt` is the webpack license banner (Phaser 3
   is MIT; PixiJS/other deps MIT).
