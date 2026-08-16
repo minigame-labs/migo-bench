@@ -15,10 +15,10 @@
 #
 # Examples:
 #   # vanilla single-file / static game (e.g. cloned 2048 build)
-#   bench/scripts/pack-game.sh webview /home/wkspace/opensource/2048
+#   bench/scripts/pack-game.sh webview /path/to/2048
 #
 #   # a game whose runnable output is under dist/
-#   bench/scripts/pack-game.sh webview /home/wkspace/opensource/phaser3-typescript/dist
+#   bench/scripts/pack-game.sh webview /path/to/phaser3-typescript-game/dist
 #
 # After packing the WebView target, build + install:
 #   (cd bench/webview-shell && ./gradlew :app:assembleRelease)
