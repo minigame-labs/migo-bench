@@ -19,9 +19,12 @@ replacement" story covers 2D-canvas games too, not only WebGL engines.
 
 - `game.bundle.js` — the game (shared source; runs as-is in the browser).
 - `index.html` + `game.bundle.js` — browser build for `webview-shell` (native Canvas 2D).
-- `game.js` — Migo build: the `migo-adapter` IIFE prelude (browser globals → `migo.*`) prepended
-  to `game.bundle.js`. Regenerate with:
-  `cat <migo>/adapter/dist/migo-adapter.bundle.js game.bundle.js > game.js` (plus the header).
+- `game.js` — Migo build: the `migo-web-adapter` IIFE prelude (browser globals → `migo.*`) prepended
+  to `game.bundle.js`. Regenerate from a checkout of
+  [minigame-labs/migo-web-adapter](https://github.com/minigame-labs/migo-web-adapter) with:
+  `npm run build && cat dist/migo-web-adapter.bundle.js <bench>/games/canvasmark/dist/game.bundle.js > game.js`
+  (plus the header line and a `;` separator between the two IIFEs — see the existing `game.js` for the
+  exact format).
 
 ## Telemetry contract
 

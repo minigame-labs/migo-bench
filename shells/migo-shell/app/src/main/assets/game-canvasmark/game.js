@@ -1,5 +1,5 @@
-// migo-adapter prelude (browser globals -> migo.*) + canvasmark game. Auto-generated.
-/* @minigame-labs/migo-adapter — IIFE bundle. Source: adapter/src/index.js */
+// migo-web-adapter prelude (browser globals -> migo.*) + canvasmark game. Auto-generated.
+/* @minigame-labs/migo-web-adapter — IIFE bundle. Source: src/index.js */
 (() => {
   // src/bom.js
   var _info = (() => {
@@ -30,6 +30,123 @@
     orientation: { angle: 0, type: innerWidth > innerHeight ? "landscape-primary" : "portrait-primary" }
   };
 
+  // src/events.js
+  var Event = class {
+    constructor(type, init = {}) {
+      this.type = type;
+      this.bubbles = !!init.bubbles;
+      this.cancelable = !!init.cancelable;
+      this.target = null;
+      this.currentTarget = null;
+      this.timeStamp = Date.now();
+      this.defaultPrevented = false;
+    }
+    preventDefault() {
+      if (this.cancelable) this.defaultPrevented = true;
+    }
+    stopPropagation() {
+    }
+    stopImmediatePropagation() {
+    }
+  };
+  var TouchEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.touches = init.touches || [];
+      this.targetTouches = init.targetTouches || this.touches;
+      this.changedTouches = init.changedTouches || this.touches;
+    }
+  };
+  var MouseEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.clientX = init.clientX || 0;
+      this.clientY = init.clientY || 0;
+      this.pageX = init.pageX || this.clientX;
+      this.pageY = init.pageY || this.clientY;
+      this.button = init.button || 0;
+      this.buttons = init.buttons || 0;
+      this.movementX = init.movementX || 0;
+      this.movementY = init.movementY || 0;
+    }
+  };
+  var WheelEvent = class extends MouseEvent {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.deltaX = init.deltaX || 0;
+      this.deltaY = init.deltaY || 0;
+      this.deltaZ = init.deltaZ || 0;
+      this.deltaMode = init.deltaMode || 0;
+    }
+  };
+  var KeyboardEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.key = init.key || "";
+      this.code = init.code || "";
+      this.ctrlKey = !!init.ctrlKey;
+      this.shiftKey = !!init.shiftKey;
+      this.altKey = !!init.altKey;
+      this.metaKey = !!init.metaKey;
+      this.repeat = !!init.repeat;
+    }
+  };
+  var CompositionEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.data = init.data != null ? init.data : "";
+    }
+  };
+  var DeviceMotionEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.acceleration = init.acceleration || null;
+      this.accelerationIncludingGravity = init.accelerationIncludingGravity || null;
+      this.rotationRate = init.rotationRate || null;
+      this.interval = init.interval || 0;
+    }
+  };
+
+  // src/gamepad.js
+  var GamepadEvent = class extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.gamepad = init.gamepad != null ? init.gamepad : null;
+    }
+  };
+  var _NO_GAMEPADS = Object.freeze([]);
+  function _transport() {
+    try {
+      return typeof migo !== "undefined" ? migo : null;
+    } catch {
+      return null;
+    }
+  }
+  function getGamepads() {
+    const runtime = _transport();
+    if (!runtime || typeof runtime.getGamepads !== "function") return _NO_GAMEPADS;
+    const pads = runtime.getGamepads();
+    return pads != null ? pads : _NO_GAMEPADS;
+  }
+  function connectGamepadEvents(dispatch) {
+    const runtime = _transport();
+    if (!runtime) return false;
+    const forward = (type) => (payload) => {
+      const gamepad = payload != null && payload.gamepad != null ? payload.gamepad : null;
+      dispatch(new GamepadEvent(type, { gamepad }));
+    };
+    let wired = false;
+    if (typeof runtime.onGamepadConnected === "function") {
+      runtime.onGamepadConnected(forward("gamepadconnected"));
+      wired = true;
+    }
+    if (typeof runtime.onGamepadDisconnected === "function") {
+      runtime.onGamepadDisconnected(forward("gamepaddisconnected"));
+      wired = true;
+    }
+    return wired;
+  }
+
   // src/navigator.js
   var _info2 = {};
   try {
@@ -52,6 +169,9 @@
     onLine: true,
     hardwareConcurrency: 4,
     maxTouchPoints: 5,
+    // Polled every frame by content; see gamepad.js for why this forwards
+    // straight to the runtime instead of wrapping what it returns.
+    getGamepads,
     // Stubs for APIs the runtime doesn't bridge yet.
     geolocation: {
       getCurrentPosition: () => {
@@ -113,7 +233,10 @@
         try {
           snapshot[i].call(this, event);
         } catch (e) {
-          if (typeof console !== "undefined" && console.error) console.error(e);
+          try {
+            if (typeof console !== "undefined" && console.error) console.error(e);
+          } catch {
+          }
         }
       }
       return !event.defaultPrevented;
@@ -121,6 +244,34 @@
   };
 
   // src/element.js
+  function maybeLoadScript(node) {
+    if (!node || node.tagName !== "SCRIPT" || !node.src || node._migoLoaded) return;
+    node._migoLoaded = true;
+    Promise.resolve().then(() => {
+      const src = String(node.src);
+      try {
+        if (/^(https?:)?\/\//i.test(src) || /^data:/i.test(src)) {
+          console.warn("[migo-web-adapter] refusing to load non-local script:", src);
+          if (typeof node.onerror === "function") node.onerror(new Error("non-local script blocked"));
+          node.dispatchEvent && node.dispatchEvent({ type: "error" });
+          return;
+        }
+        const path = src.replace(/^\.?\//, "").split("?")[0].split("#")[0];
+        const fs = typeof migo !== "undefined" && migo.getFileSystemManager && migo.getFileSystemManager();
+        if (!fs || typeof fs.readFileSync !== "function") {
+          throw new Error("no filesystem manager to read local script");
+        }
+        const code = fs.readFileSync(path, "utf8");
+        (0, eval)(code);
+        if (typeof node.onload === "function") node.onload();
+        node.dispatchEvent && node.dispatchEvent({ type: "load" });
+      } catch (e) {
+        console.error("[migo-web-adapter] local script load failed:", src, e);
+        if (typeof node.onerror === "function") node.onerror(e);
+        node.dispatchEvent && node.dispatchEvent({ type: "error" });
+      }
+    });
+  }
   var Node = class extends EventTarget {
     constructor() {
       super();
@@ -134,6 +285,7 @@
       if (node.parentNode) node.parentNode.removeChild(node);
       this.children.push(node);
       node.parentNode = this;
+      maybeLoadScript(node);
       return node;
     }
     removeChild(node) {
@@ -151,6 +303,7 @@
       if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
       this.children.splice(i, 0, newNode);
       newNode.parentNode = this;
+      maybeLoadScript(newNode);
       return newNode;
     }
     cloneNode() {
@@ -268,7 +421,7 @@
   // src/image.js
   function Image() {
     if (typeof migo.createImage !== "function") {
-      throw new Error("[migo-adapter] migo.createImage is not available");
+      throw new Error("[migo-web-adapter] migo.createImage is not available");
     }
     return migo.createImage();
   }
@@ -276,7 +429,7 @@
   // src/canvas.js
   function Canvas() {
     if (typeof migo.createCanvas !== "function") {
-      throw new Error("[migo-adapter] migo.createCanvas is not available");
+      throw new Error("[migo-web-adapter] migo.createCanvas is not available");
     }
     const c = migo.createCanvas();
     if (typeof c.addEventListener !== "function") {
@@ -291,23 +444,48 @@
   }
 
   // src/audio.js
+  var _audioFinalizer = typeof FinalizationRegistry === "function" ? new FinalizationRegistry((ctx) => {
+    try {
+      if (ctx && typeof ctx.destroy === "function") ctx.destroy();
+    } catch (_) {
+    }
+  }) : null;
   var Audio = class _Audio extends EventTarget {
     constructor(src) {
       super();
       if (typeof migo.createInnerAudioContext !== "function") {
-        throw new Error("[migo-adapter] migo.createInnerAudioContext is not available");
+        throw new Error("[migo-web-adapter] migo.createInnerAudioContext is not available");
       }
       this._ctx = migo.createInnerAudioContext();
       this._readyState = 0;
-      const dispatchSelf = (type) => () => {
-        if (type === "canplay") this._readyState = 4;
-        this.dispatchEvent({ type });
-      };
-      this._ctx.onCanplay && this._ctx.onCanplay(dispatchSelf("canplay"));
-      this._ctx.onPlay && this._ctx.onPlay(dispatchSelf("play"));
-      this._ctx.onPause && this._ctx.onPause(dispatchSelf("pause"));
-      this._ctx.onEnded && this._ctx.onEnded(dispatchSelf("ended"));
-      this._ctx.onError && this._ctx.onError((err) => this.dispatchEvent({ type: "error", error: err }));
+      if (typeof WeakRef === "function") {
+        const selfRef = new WeakRef(this);
+        const dispatchSelf = (type) => () => {
+          const self = selfRef.deref();
+          if (!self) return;
+          if (type === "canplay") self._readyState = 4;
+          self.dispatchEvent({ type });
+        };
+        this._ctx.onCanplay && this._ctx.onCanplay(dispatchSelf("canplay"));
+        this._ctx.onPlay && this._ctx.onPlay(dispatchSelf("play"));
+        this._ctx.onPause && this._ctx.onPause(dispatchSelf("pause"));
+        this._ctx.onEnded && this._ctx.onEnded(dispatchSelf("ended"));
+        this._ctx.onError && this._ctx.onError((err) => {
+          const self = selfRef.deref();
+          if (self) self.dispatchEvent({ type: "error", error: err });
+        });
+      } else {
+        const dispatchSelf = (type) => () => {
+          if (type === "canplay") this._readyState = 4;
+          this.dispatchEvent({ type });
+        };
+        this._ctx.onCanplay && this._ctx.onCanplay(dispatchSelf("canplay"));
+        this._ctx.onPlay && this._ctx.onPlay(dispatchSelf("play"));
+        this._ctx.onPause && this._ctx.onPause(dispatchSelf("pause"));
+        this._ctx.onEnded && this._ctx.onEnded(dispatchSelf("ended"));
+        this._ctx.onError && this._ctx.onError((err) => this.dispatchEvent({ type: "error", error: err }));
+      }
+      if (_audioFinalizer) _audioFinalizer.register(this, this._ctx, this);
       if (src) this.src = src;
     }
     set src(v) {
@@ -360,6 +538,12 @@
     // no-op — InnerAudioContext loads on src set / play
     cloneNode() {
       return new _Audio(this.src);
+    }
+    // Not a standard HTMLMediaElement method, but exposed so callers can release
+    // the native context deterministically instead of waiting for GC.
+    destroy() {
+      if (_audioFinalizer) _audioFinalizer.unregister(this);
+      if (this._ctx && typeof this._ctx.destroy === "function") this._ctx.destroy();
     }
   };
 
@@ -439,54 +623,6 @@
     }
   };
   var document_default = document;
-
-  // src/events.js
-  var Event = class {
-    constructor(type, init = {}) {
-      this.type = type;
-      this.bubbles = !!init.bubbles;
-      this.cancelable = !!init.cancelable;
-      this.target = null;
-      this.currentTarget = null;
-      this.timeStamp = Date.now();
-      this.defaultPrevented = false;
-    }
-    preventDefault() {
-      if (this.cancelable) this.defaultPrevented = true;
-    }
-    stopPropagation() {
-    }
-    stopImmediatePropagation() {
-    }
-  };
-  var TouchEvent = class extends Event {
-    constructor(type, init = {}) {
-      super(type, init);
-      this.touches = init.touches || [];
-      this.targetTouches = init.targetTouches || this.touches;
-      this.changedTouches = init.changedTouches || this.touches;
-    }
-  };
-  var MouseEvent = class extends Event {
-    constructor(type, init = {}) {
-      super(type, init);
-      this.clientX = init.clientX || 0;
-      this.clientY = init.clientY || 0;
-      this.pageX = init.pageX || this.clientX;
-      this.pageY = init.pageY || this.clientY;
-      this.button = init.button || 0;
-      this.buttons = init.buttons || 0;
-    }
-  };
-  var DeviceMotionEvent = class extends Event {
-    constructor(type, init = {}) {
-      super(type, init);
-      this.acceleration = init.acceleration || null;
-      this.accelerationIncludingGravity = init.accelerationIncludingGravity || null;
-      this.rotationRate = init.rotationRate || null;
-      this.interval = init.interval || 0;
-    }
-  };
 
   // src/local-storage.js
   var localStorage = {
@@ -583,7 +719,7 @@
     }
     send(body) {
       if (typeof migo.request !== "function") {
-        throw new Error("[migo-adapter] migo.request is not available");
+        throw new Error("[migo-web-adapter] migo.request is not available");
       }
       const dataType = this.responseType === "json" ? "json" : void 0;
       const responseType = this.responseType === "arraybuffer" ? "arraybuffer" : "text";
@@ -648,7 +784,7 @@
     constructor(url, protocols) {
       super();
       if (typeof migo.connectSocket !== "function") {
-        throw new Error("[migo-adapter] migo.connectSocket is not available");
+        throw new Error("[migo-web-adapter] migo.connectSocket is not available");
       }
       this.url = url;
       this.protocol = Array.isArray(protocols) ? protocols.join(",") : protocols || "";
@@ -861,32 +997,154 @@
   var intl_default = Intl;
 
   // src/index.js
-  if (!globalThis.__migoAdapterInjected) {
-    globalThis.__migoAdapterInjected = true;
+  if (!globalThis.__migoWebAdapterInjected) {
+    globalThis.__migoWebAdapterInjected = true;
     const canvas = new Canvas();
     canvas.id = "GameCanvas";
     globalThis.canvas = canvas;
     const _winTarget = new EventTarget();
-    const _forward = (type) => (e) => {
-      const ev = { ...e, type, target: canvas };
+    const _emit = (ev) => {
+      ev.target = canvas;
       canvas.dispatchEvent && canvas.dispatchEvent(ev);
       document_default.dispatchEvent(ev);
       _winTarget.dispatchEvent(ev);
-      const sink = document_default["on" + type];
+      const sink = document_default["on" + ev.type];
       if (typeof sink === "function") try {
         sink(ev);
       } catch {
       }
-      const wsink = globalThis["on" + type];
+      const wsink = globalThis["on" + ev.type];
+      if (typeof wsink === "function") try {
+        wsink(ev);
+      } catch {
+      }
+      return ev.defaultPrevented;
+    };
+    let _touchCompat = null;
+    const _forwardTouch = (type) => (e) => {
+      const ev = new TouchEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        touches: e.touches || [],
+        changedTouches: e.changedTouches || e.touches || []
+      });
+      ev.timeStamp = e.timeStamp;
+      const prevented = _emit(ev);
+      if (type === "touchstart") {
+        _touchCompat = prevented;
+      } else if (type === "touchend" || type === "touchcancel") {
+        setTimeout(() => {
+          _touchCompat = null;
+        }, 0);
+      }
+    };
+    if (typeof migo.onTouchStart === "function") migo.onTouchStart(_forwardTouch("touchstart"));
+    if (typeof migo.onTouchMove === "function") migo.onTouchMove(_forwardTouch("touchmove"));
+    if (typeof migo.onTouchEnd === "function") migo.onTouchEnd(_forwardTouch("touchend"));
+    if (typeof migo.onTouchCancel === "function") migo.onTouchCancel(_forwardTouch("touchcancel"));
+    const _emitCompatMouse = (type, src, extra) => {
+      Promise.resolve().then().then(() => {
+        if (_touchCompat === true) return;
+        const ev = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: src.x,
+          clientY: src.y,
+          button: src.button,
+          buttons: type === "mouseup" ? 0 : 1,
+          ...extra
+        });
+        ev.timeStamp = src.timeStamp;
+        _emit(ev);
+        if (type === "mouseup") {
+          const click = new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            clientX: src.x,
+            clientY: src.y,
+            button: src.button
+          });
+          click.timeStamp = src.timeStamp;
+          _emit(click);
+        }
+      });
+    };
+    if (typeof migo.onMouseDown === "function") migo.onMouseDown((e) => _emitCompatMouse("mousedown", e));
+    if (typeof migo.onMouseMove === "function") migo.onMouseMove((e) => _emitCompatMouse("mousemove", e, { movementX: e.movementX, movementY: e.movementY }));
+    if (typeof migo.onMouseUp === "function") migo.onMouseUp((e) => _emitCompatMouse("mouseup", e));
+    if (typeof migo.onWheel === "function") {
+      migo.onWheel((e) => {
+        const ev = new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          deltaX: e.deltaX,
+          deltaY: e.deltaY,
+          deltaZ: e.deltaZ,
+          deltaMode: e.deltaMode
+        });
+        ev.timeStamp = e.timeStamp;
+        _emit(ev);
+      });
+    }
+    const _emitDocWin = (ev) => {
+      ev.target = document_default;
+      document_default.dispatchEvent(ev);
+      _winTarget.dispatchEvent(ev);
+      const sink = document_default["on" + ev.type];
+      if (typeof sink === "function") try {
+        sink(ev);
+      } catch {
+      }
+      const wsink = globalThis["on" + ev.type];
       if (typeof wsink === "function") try {
         wsink(ev);
       } catch {
       }
     };
-    if (typeof migo.onTouchStart === "function") migo.onTouchStart(_forward("touchstart"));
-    if (typeof migo.onTouchMove === "function") migo.onTouchMove(_forward("touchmove"));
-    if (typeof migo.onTouchEnd === "function") migo.onTouchEnd(_forward("touchend"));
-    if (typeof migo.onTouchCancel === "function") migo.onTouchCancel(_forward("touchcancel"));
+    const _forwardKey = (type) => (e) => {
+      const ev = new KeyboardEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        key: e.key,
+        code: e.code,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        repeat: e.repeat
+      });
+      ev.timeStamp = e.timeStamp;
+      _emitDocWin(ev);
+    };
+    if (typeof migo.onKeyDown === "function") migo.onKeyDown(_forwardKey("keydown"));
+    if (typeof migo.onKeyUp === "function") migo.onKeyUp(_forwardKey("keyup"));
+    const _forwardComposition = (type) => (e) => {
+      _emitDocWin(new CompositionEvent(type, { bubbles: true, cancelable: true, data: e.data }));
+    };
+    if (typeof migo.onCompositionStart === "function") migo.onCompositionStart(_forwardComposition("compositionstart"));
+    if (typeof migo.onCompositionUpdate === "function") migo.onCompositionUpdate(_forwardComposition("compositionupdate"));
+    if (typeof migo.onCompositionEnd === "function") migo.onCompositionEnd(_forwardComposition("compositionend"));
+    const _setVisibility = (hidden) => {
+      document_default.hidden = hidden;
+      document_default.visibilityState = hidden ? "hidden" : "visible";
+      const ev = new Event("visibilitychange", { bubbles: true, cancelable: false });
+      ev.target = document_default;
+      document_default.dispatchEvent(ev);
+      if (typeof document_default.onvisibilitychange === "function") try {
+        document_default.onvisibilitychange(ev);
+      } catch {
+      }
+    };
+    if (typeof migo.onHide === "function") migo.onHide(() => _setVisibility(true));
+    if (typeof migo.onShow === "function") migo.onShow(() => _setVisibility(false));
+    connectGamepadEvents((event) => {
+      _winTarget.dispatchEvent(event);
+      const sink = globalThis["on" + event.type];
+      if (typeof sink === "function") try {
+        sink(event);
+      } catch {
+      }
+    });
     document_default.documentElement = globalThis;
     const surface = {
       // BOM scalars (data values, snapshotted; bom.js refreshes on resize)
@@ -916,7 +1174,11 @@
       Event,
       TouchEvent,
       MouseEvent,
+      WheelEvent,
+      KeyboardEvent,
+      CompositionEvent,
       DeviceMotionEvent,
+      GamepadEvent,
       Image,
       Audio,
       XMLHttpRequest,
@@ -991,6 +1253,7 @@
   var index_default = globalThis;
 })();
 
+;
 // canvasmark — a Canvas 2D sprite benchmark (the 2D-path analog of bunnymark, which is
 // WebGL/Pixi). Pure vanilla Canvas2D: no engine, no CDN, no image assets. Draws N bouncing
 // rotating squares per frame via ctx.save/translate/rotate/fillRect — the canvas2d hot path.
