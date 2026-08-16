@@ -1,5 +1,7 @@
 # migo-bench
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 Reproducible **Migo vs Android System WebView** benchmarks — the same game, same device,
 same interaction script, on both runtimes. The evidence behind Migo's "open-source native
 runtime that replaces the WebView" positioning.
@@ -17,7 +19,7 @@ runtime that replaces the WebView" positioning.
 > harness** (every Migo optimization/fix re-runs the same comparison against a baseline).
 > A credible, reproducible benchmark *is* the marketing artifact — credibility is the sell.
 
-## 📊 结果报告 / Results report
+## 📊 Results report
 
 **[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
