@@ -2,7 +2,9 @@
 
 The second bench game — a **real** mini-game (full Phaser 3 webpack build), not a
 synthetic loop. It exists to show whether Migo's lead holds on a heavier, realistic
-engine. It does (the gap *widens*): see [RESULTS.md](../../RESULTS.md) §3.6.
+engine. It mostly does: memory stays in the same ~40% range and the CPU gap widens
+to ~2.9×, but startup is a wash here (Migo ~6% slower, within single-run jitter) and
+fps stays a near-tie, same as the other two games: see [RESULTS.md](../../RESULTS.md) §3.2.
 
 ## Payloads (`dist/`)
 

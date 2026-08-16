@@ -13,7 +13,7 @@ runtime that replaces the WebView" positioning.
 
 <sub>Mate30 Pro · release build · 3 games (Pixi/WebGL, Phaser/WebGL, Canvas2D) · every bar traces to a pinned Migo version. Full per-metric tables → **[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)**.</sub>
 
-> **Status — Migo is pre-1.0, actively shipping.** Every release since v0.9.0 has published a runnable, attested AAR — reproduce every number yourself with `--migo-aar release-tag:v0.9.2` (or any tag from [minigame-labs/migo/releases](https://github.com/minigame-labs/migo/releases)). This repo is the public, auditable evidence trail behind those numbers.
+> **Status — Migo is pre-1.0, actively shipping.** Every release since v0.9.0 has published a runnable, attested AAR — reproduce every number yourself with `--migo-aar release-tag:v0.9.3` (or any tag from [minigame-labs/migo/releases](https://github.com/minigame-labs/migo/releases)). This repo is the public, auditable evidence trail behind those numbers.
 
 > This repo is both a **showcase** (adopters/skeptics can re-run it) and a **regression
 > harness** (every Migo optimization/fix re-runs the same comparison against a baseline).
