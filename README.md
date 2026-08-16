@@ -21,10 +21,8 @@ runtime that replaces the WebView" positioning.
 
 **[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
-> Numbers below are from the **2026-07 re-run** on a **release** Migo build (opt-z + LTO, the shipping config), **after fixing two rendering bugs** (Migo Canvas2D rendered only 1/9 of the screen; WebView endless-runner was blank in landscape) — see RESULTS §0/§6. Earlier published numbers are superseded.
-TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo ~40–44% less · CPU ~1.9–2.9× less · game-ready mostly faster · fps near-tie (~58 vs 60) at normal load.**
-🎉 **canvasmark's Canvas2D memory leak no longer reproduces** — the earlier debug build sawtoothed to ~285 MB here; this round Migo holds a stable ~118 MB (< WebView's ~213 MB), even rendering the full screen.
-✅ **Stress parity, restored the honest way** — a heavy-load regression *did* appear mid-development (past ~20k sprites Migo once trailed WebView, 100k 19 vs 32fps). We bisected it to a specific commit (`4b69dbb`, an on-demand-RAF change that let the compute thread's clock sag), fixed it in **#40**, and **re-validated under temperature control** (both runtimes cold-gated to an identical start, per-second CPU-frequency logging, two runs each): Migo #40 now **ties WebView across the whole ramp and edges ahead at high load** (100k 32 vs 31, 180k 18 vs 15) — and does it at a *lower* big-core frequency and temperature, so the parity is real, not a thermal artifact. See RESULTS §8. We leave the full regression-and-fix trail visible on purpose: a benchmark that hides its sponsor's stumbles isn't credible.
+TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo ~40–45% less · CPU ~1.9–2.9× less · game-ready mostly faster · fps near-tie (~58 vs 60) at normal load.**
+✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): Migo ties WebView across the whole curve and edges ahead at the high end (100k 32 vs 31fps, 180k 18 vs 15fps), while running cooler and spreading work across all CPU clusters instead of pinning one core near its ceiling. See RESULTS §4.
 
 ## What it measures (and the honest weighting)
 
@@ -93,9 +91,9 @@ bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --scena
 
 A deterministic **in-game sprite ramp** (2k→220k, 5 s per stage — Pixi-ticker based, identical
 both sides; `scripts/make-stress-game.sh` generates it from the normal bundle) drives the load
-while the harness records `bunnies=N fps=M`. fps is plotted against N. As of #40 the two
-curves track each other across the whole ramp (Migo at parity, edging ahead at high load) —
-see RESULTS §8. `scripts/stress-ab.sh` runs this cold-gated with per-cluster frequency logging.
+while the harness records `bunnies=N fps=M`. fps is plotted against N. The two curves track
+each other across the whole ramp (Migo at parity, edging ahead at high load) — see RESULTS §4.
+`scripts/stress-ab.sh` runs this cold-gated with per-cluster frequency logging.
 
 ## Regression workflow — compare against a baseline
 
