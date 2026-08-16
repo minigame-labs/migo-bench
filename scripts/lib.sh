@@ -6,7 +6,8 @@ set -eu
 HARNESS_VERSION="1.0.0"
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-ADB_BIN="${ADB_BIN:-/home/user/Android/Sdk/platform-tools/adb}"
+ADB_BIN="${ADB_BIN:-${ANDROID_HOME:+$ANDROID_HOME/platform-tools/adb}}"
+ADB_BIN="${ADB_BIN:-adb}"
 SERIAL="${SERIAL:-}"
 ADB=("$ADB_BIN"); [[ -n "$SERIAL" ]] && ADB=("$ADB_BIN" -s "$SERIAL")
 

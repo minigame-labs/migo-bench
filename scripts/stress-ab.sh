@@ -17,8 +17,9 @@ S="${1:?usage: stress-ab.sh <serial> <migo-release-aar> [duration]}"
 AAR="${2:?need path to a locally-built migo release AAR (scripts/build-aar.sh in the migo repo)}"
 DUR="${3:-75}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ADB=(/home/user/Android/Sdk/platform-tools/adb -s "$S")
-[[ -x "${ADB[0]}" ]] || ADB=(adb -s "$S")
+ADB_BIN="${ANDROID_HOME:+$ANDROID_HOME/platform-tools/adb}"
+[[ -n "$ADB_BIN" && -x "$ADB_BIN" ]] || ADB_BIN="adb"
+ADB=("$ADB_BIN" -s "$S")
 OUT="$DIR/../out"; mkdir -p "$OUT"
 
 read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
