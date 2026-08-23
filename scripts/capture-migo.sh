@@ -13,7 +13,7 @@ while [[ $# -gt 0 ]]; do case "$1" in
   *) echo "unknown $1" >&2; exit 2;; esac; done
 require_one_device
 
-PKG=com.migo.bench.migo; LAUNCH=.LauncherActivity; DISP=.BenchGameActivity
+PKG=com.migo.bench.migo; LAUNCH=.BenchGameActivity; DISP=.BenchGameActivity
 SHELL_DIR="$DIR/../shells/migo-shell"; pfx="$OUT/$LABEL"
 
 [[ -f "$SHELL_DIR/app/libs/migo.aar" ]] || { echo "ERROR: migo.aar not staged (run resolve-migo-aar.sh)" >&2; exit 2; }
@@ -29,7 +29,7 @@ else
   echo "cold_start_ms=$(cold_start_ms "$PKG" "$LAUNCH" "$DISP" "$COLD")" >> "${pfx}_meta.txt"
   echo "game_ready_ms=$(game_ready_ms "$PKG" "$DISP" "$LAUNCH" "$COLD")" >> "${pfx}_meta.txt"
   "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
-  "${ADB[@]}" shell am start -n "$PKG/$LAUNCH" $(_asset_extra) >/dev/null 2>&1; sleep 8   # migo game load is async
+  "${ADB[@]}" shell am start -n "$PKG/$LAUNCH" $(_migo_launch_extras) $(_asset_extra) >/dev/null 2>&1; sleep 8   # migo game load is async
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"
   echo "cpu_pct=$(capture_cpu "$PKG")" >> "${pfx}_meta.txt"
   capture_mem "$PKG" "${pfx}_mem.txt"

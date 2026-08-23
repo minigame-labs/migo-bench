@@ -47,7 +47,7 @@ adbsh am force-stop "$PKG" >/dev/null 2>&1 || true
 adbsh "run-as $PKG rm -f files/v8.log" >/dev/null 2>&1 || true
 
 echo ">> launching $PKG game_asset=$GAME"
-adbsh am start -n "$PKG/.LauncherActivity" --es game_asset "$GAME" >/dev/null
+adbsh am start -n "$PKG/.BenchGameActivity" --es migo_game_id bench --es migo_entry_point game.js --es game_asset "$GAME" >/dev/null
 
 # Wait for the game to reach steady state, showing progress.
 for ((t=10; t<=SECS; t+=10)); do

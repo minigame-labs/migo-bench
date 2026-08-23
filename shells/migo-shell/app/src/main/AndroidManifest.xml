@@ -14,7 +14,7 @@
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true">
 
-        <!-- Launcher: deploys the bundled game, forwards to BenchGameActivity, finishes. -->
+        <!-- Icon entry point only; it forwards and finishes. -->
         <activity
             android:name=".LauncherActivity"
             android:exported="true"
@@ -25,10 +25,14 @@
             </intent-filter>
         </activity>
 
-        <!-- Migo host: loads one game, reportFullyDrawn() at first frame. -->
+        <!-- Migo host: loads one game, reportFullyDrawn() at its first frame.
+             Exported so the harness can `am start` it directly, which is what
+             makes this shell one activity like the webview shell: measuring a
+             launch that goes through a trampoline measures the trampoline. A
+             product would not export a game activity without deciding to. -->
         <activity
             android:name=".BenchGameActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>

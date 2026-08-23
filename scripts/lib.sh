@@ -17,6 +17,16 @@ ADB=("$ADB_BIN"); [[ -n "$SERIAL" ]] && ADB=("$ADB_BIN" -s "$SERIAL")
 GAME_ASSET="${GAME_ASSET:-}"
 _asset_extra() { [ -n "$GAME_ASSET" ] && printf -- '--es game_asset %s' "$GAME_ASSET" || true; }
 
+# The extras BenchGameActivity needs when started from outside the process.
+#
+# `am start` cannot use MigoGameActivity's in-process config table, so the game
+# id and entry point travel as intent extras and the config comes from the
+# activity's own `onCreateRuntimeConfig()`. This is what lets the migo shell be
+# one activity like the webview shell: the launcher used to deploy the game and
+# build the config before forwarding, which put an activity transition and a
+# full asset copy inside every measured launch that the webview side never paid.
+_migo_launch_extras() { printf -- '--es migo_game_id bench --es migo_entry_point game.js'; }
+
 require_one_device() {
   command -v "$ADB_BIN" >/dev/null 2>&1 || { echo "ERROR: adb not found at $ADB_BIN" >&2; exit 2; }
   if [[ -z "$SERIAL" ]]; then
@@ -130,7 +140,8 @@ game_ready_ms() {
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2; "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
-    "${ADB[@]}" shell am start -n "$pkg/$launch" $(_asset_extra) >/dev/null 2>&1
+    _extra=""; case "$pkg" in *bench.migo) _extra="$(_migo_launch_extras)";; esac
+    "${ADB[@]}" shell am start -n "$pkg/$launch" $_extra $(_asset_extra) >/dev/null 2>&1
     sleep 8
     tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Fully drawn ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
     [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
@@ -143,8 +154,8 @@ game_ready_ms() {
 # cold_start_ms <pkg> <launch_activity> <displayed_activity> <runs>
 #   Cold launches <runs> times; each reads ActivityManager's system-level
 #   "Displayed <pkg>/<displayed_activity>: +Nms" (launch -> first surface frame).
-#   For migo, launch=.LauncherActivity but the displayed activity is .BenchGameActivity
-#   (the launcher forwards + finishes). Prints the median ms.
+#   Both shells are one activity, so launch == displayed on both sides.
+#   Prints the median ms.
 cold_start_ms() {
   local pkg="$1" launch="$2" disp="$3" runs="$4" i ms tok vals=()
   for ((i=0; i<runs; i++)); do
@@ -152,7 +163,8 @@ cold_start_ms() {
     "${ADB[@]}" shell am kill-all >/dev/null 2>&1 || true
     sleep 2
     "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
-    "${ADB[@]}" shell am start -n "$pkg/$launch" $(_asset_extra) >/dev/null 2>&1
+    _extra=""; case "$pkg" in *bench.migo) _extra="$(_migo_launch_extras)";; esac
+    "${ADB[@]}" shell am start -n "$pkg/$launch" $_extra $(_asset_extra) >/dev/null 2>&1
     sleep 8
     tok=$("${ADB[@]}" logcat -d 2>/dev/null | grep -oE "Displayed ${pkg}/${disp}: \+[0-9a-z]+ms" | head -1 | grep -oE '\+[0-9a-z]+ms')
     [ -n "$tok" ] && ms=$(_amtime_ms "$tok") || ms=""
@@ -171,7 +183,8 @@ capture_stress() {
   "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
   sleep 2
   "${ADB[@]}" logcat -c >/dev/null 2>&1 || true
-  "${ADB[@]}" shell am start -n "$pkg/$act" --es game_asset game-stress >/dev/null 2>&1
+  local _extra=""; case "$pkg" in *bench.migo) _extra="$(_migo_launch_extras)";; esac
+  "${ADB[@]}" shell am start -n "$pkg/$act" $_extra --es game_asset game-stress >/dev/null 2>&1
   sleep "$dur"
   "${ADB[@]}" logcat -d 2>/dev/null | grep -oE 'bunnies=[0-9]+ fps=[0-9]+' > "$outf" || true
 }

@@ -1,20 +1,22 @@
 # migo-bench 对比结果
 
-> 中文为默认版本；英文见 [RESULTS.en.md](RESULTS.en.md)。
+> 中文为默认版本;英文见 [RESULTS.en.md](RESULTS.en.md)。
 > 原始数据:`out/results.csv`(稳态)、`out/stress_*.csv`(压力曲线)。每行都带完整溯源(Migo 版本、设备、WebView 版本、时间戳、`fps_source`)。
-> 测试构建:Migo **release**(opt-z + LTO,出货配置)。
+> 测试构建:Migo **release**(opt-z + LTO,出货配置),宿主配置与出货一致(`setDebugEnabled(false)`)。
+> **本页数据于 2026-08-23 全量重测。** 此前发布的数字有三处口径问题,详见 §5.1——两处对 Migo 有利、一处不利,现已全部消除。
 
 ## 1. 结论先行
 
-同一游戏、同一设备、同一交互,**Migo 原生运行时(release)** vs **Android 系统 WebView**。定位:Migo = 开源原生的 WebView 替代。
+同一游戏、同一设备、同一交互,**Migo 原生运行时(release)** vs **Android 系统 WebView**。定位:Migo = 源码可得的原生 WebView 替代。
 
-- ✅ **内存:Migo 明显更省,三款游戏一致 ~40–45%**(bunnymark 132 vs 227、endless-runner 226 vs 382、canvasmark 118 vs 213 MB)。公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。
-- ✅ **CPU:Migo 用 WebView 的 1/2 或更少(~1.9–2.9×)**——bunnymark 2.6×、endless-runner 2.9×、canvasmark 1.9×。原生 GL/Skia 比 Chromium 合成器省 CPU;也是功耗代理。
-- ✅ **启动:Migo 多数更快**——游戏就绪(`Fully drawn`)bunnymark 495 vs 697、canvasmark 473 vs 517 ms;endless-runner 710 vs 671(略慢 ~6%,单轮抖动范围内)。
-- = **帧率(常规负载):近乎打平**——Migo ~58 vs WebView 60fps(Migo 1% low 略低),三款一致。
-- ✅ **重载扩展性良好**——压测到 220,000 个精灵(远超真实小游戏的常规负载),Migo 全曲线与 WebView 打平、高载略胜,且运行更凉、负载分摊在多个 CPU 集群上,而非把单核顶到上限。详见 §4。
+- ✅ **内存:Migo 少 47–61%**(bunnymark 111 vs 225、endless-runner 201 vs 379、canvasmark 85 vs 220 MB)。公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。
+- ✅ **CPU:Migo 用 WebView 的 1/3 到 1/2(2.3–3.0×)**——bunnymark 2.8×、endless-runner 3.0×、canvasmark 2.3×。
+- ✅ **启动:三款游戏、两项指标,六项全部更快。** 首帧快 13–55%,可玩快 4–39%。
+- = **帧率:打平。** 两侧中位数都是 60 fps;1% 低帧 Migo 59、WebView 60。
+- = **重载扩展性:打平。** 压到 220,000 精灵,拐点两边都在 40,000,曲线逐档持平或 Migo 高 1 fps。
+- ⚠️ **endless-runner 的可玩耗时实际是平手**,不是领先:Migo 三轮 628/633/749 ms,WebView 647/658/664 ms,区间重叠。写成"快 4%"会高估。
 
-> 注意:目前仅测过高端机(麒麟 990)。常规负载下 Migo 占优;中低端机的内存/启动差距预计更大——是下一步测试重点。
+> 注意:目前仅测过高端机(麒麟 990)。中低端机的内存/启动差距预计更大——是下一步测试重点。
 
 ## 2. 测试矩阵(设备 × 游戏)
 
@@ -25,29 +27,30 @@
 | **低端** ⭐(~2-3G) | 🔜 | 🔜 | 🔜 |
 
 > 1 设备 × 3 游戏(两条渲染路径:WebGL × 2 + Canvas2D × 1),真机渲染逐一核对满屏正确。
-> **跨游戏结论**:常规负载下 Migo 领先幅度三款高度一致(内存 ~40–45%、CPU ~1.9–2.9×),是一层稳定的低底噪优势,与游戏轻重基本无关。
 
 ## 3. 分游戏结果
 
-### 3.1 bunnymark(Pixi/WebGL,100 精灵,60s 稳态)
+每格为**三轮交错测量的中位数**(见 §5.2);每轮内 WebView 与 Migo 背靠背跑同一款游戏。
+
+### 3.1 bunnymark(Pixi/WebGL)
 
 | 指标 | WebView | Migo | 差异 |
 |---|---|---|---|
-| PSS 内存峰值 | 227 MB | 132 MB | Migo 少 ~42% |
-| CPU(多核) | 118% | 46% | Migo ~2.6× 少 |
-| 游戏就绪(`Fully drawn`,凉机) | 697 ms | 495 ms | Migo 快 ~29% |
-| fps 中位 / 1% low | 60 / 60 | 58 / 55 | 近乎打平 |
-
-内存口径:WebView = 主进程 + chromium 沙箱渲染进程之和;Migo 单进程,全部计入。CPU 口径:`/proc/<pid>/stat` 增量,取多窗口中位数。
+| PSS 内存峰值 | 225 MB | 111 MB | Migo 少 51% |
+| CPU(多核) | 127% | 46% | Migo 2.8× 少 |
+| 首帧(`Displayed`) | 522 ms | 235 ms | Migo 快 55% |
+| 可玩(`Fully drawn`) | 650 ms | 399 ms | Migo 快 39% |
+| fps 中位 / 1% low | 60 / 60 | 60 / 59 | 打平 |
 
 ### 3.2 endless-runner(Phaser/WebGL)
 
 | 指标 | WebView | Migo | 差异 |
 |---|---|---|---|
-| PSS 内存峰值 | 382 MB | 226 MB | Migo 少 ~41% |
-| CPU(多核) | 127% | 44% | Migo ~2.9× 少 |
-| 游戏就绪 | 671 ms | 710 ms | 略慢 ~6%(抖动内) |
-| fps 中位 / 1% low | 60 / 60 | 58 / 55 | 近乎打平 |
+| PSS 内存峰值 | 379 MB | 201 MB | Migo 少 47% |
+| CPU(多核) | 134% | 44% | Migo 3.0× 少 |
+| 首帧 | 380 ms | 329 ms | Migo 快 13% |
+| 可玩 | 658 ms | 633 ms | **平手**(区间重叠,见 §1) |
+| fps 中位 / 1% low | 60 / 60 | 60 / 59 | 打平 |
 
 WebView 竖屏 fit-scale、Migo 原生横屏(按 game.json)——两边均渲染整局、像素预算相同。
 
@@ -55,55 +58,92 @@ WebView 竖屏 fit-scale、Migo 原生横屏(按 game.json)——两边均渲染
 
 | 指标 | WebView | Migo | 差异 |
 |---|---|---|---|
-| PSS 内存(稳) | 213 MB | 118 MB | Migo 少 ~45% |
-| CPU(多核) | 160% | 83% | Migo ~1.9× 少 |
-| 游戏就绪 | 517 ms | 473 ms | Migo 快 ~9% |
-| fps 中位 / 1% low | 60 / 60 | 58 / 57 | 近乎打平 |
+| PSS 内存(稳) | 220 MB | 85 MB | Migo 少 61% |
+| CPU(多核) | 171% | 74% | Migo 2.3× 少 |
+| 首帧 | 377 ms | 233 ms | Migo 快 38% |
+| 可玩 | 376 ms | 322 ms | Migo 快 14% |
+| fps 中位 / 1% low | 60 / 60 | 60 / 59 | 打平 |
 
-Canvas2D 路径(非 WebGL)两侧都比 WebGL 更吃 CPU,因此这里的领先幅度比另外两款小,属正常现象。
+Canvas2D 路径两侧都比 WebGL 更吃 CPU,因此 CPU 领先幅度比另外两款小,属正常现象。
 
 ## 4. 重载下的扩展性
 
-常规负载(数百精灵,真实小游戏的典型量级)下两边帧率近乎打平。为了解每个运行时在极端负载下如何扩展,我们用游戏内确定性精灵 ramp 把负载一路推到 220,000 个精灵(远超任何真实小游戏),每档冷却门控到同一起始温度后各跑两次:
+用游戏内确定性精灵 ramp 把负载推到 220,000 精灵(远超任何真实小游戏),每档冷却门控到同一起始温度后各跑两次:
 
 | 精灵数 | WebView fps(两次) | Migo fps(两次) | Migo/WebView |
 |---:|---:|---:|---:|
-| 40 000 | 60 / 60 | 58 / 59 | 0.97× |
-| 70 000 | 41 / 43 | 45 / 45 | 1.07× |
+| 40 000 | 60 / 60 | 60 / 60 | 1.00× |
+| 70 000 | 43 / 42 | 44 / 45 | 1.05× |
 | 100 000 | 31 / 31 | 32 / 32 | 1.03× |
-| 140 000 | 22 / 22 | 23 / 23 | 1.05× |
-| 180 000 | 15 / 16 | 18 / 17 | 1.13× |
+| 140 000 | 23 / 23 | 23 / 23 | 1.00× |
+| 180 000 | 16 / 16 | 17 / 17 | 1.06× |
 | 220 000 | 13 / 13 | 13 / 13 | 1.00× |
 
-两边掉到 55fps 以下的拐点都在 40,000 精灵左右。**Migo 全曲线与 WebView 打平、高载略胜**,并且是在更低的热代价下做到的:在 220k 这一极限点,WebView 把大核顶到接近满频(2855MHz)才勉强追平,而 Migo 把工作分摊到三个 CPU 集群(大/中/小核并行处理渲染、上传、JS),整机温度更低(SoC 尾值 62.4°C vs WebView 66.1°C)。
+两边掉到 55fps 以下的拐点都在 40,000 精灵。**结论是打平**,Migo 在三档上高 1 fps。
 
-方法:两个运行时都用冷却门控制在同一起始温度(≤35°C、大核已恢复满频)才开跑,每秒采样三个 CPU 集群的频率与 SoC 温度,每档各跑两次以确认一致性。复现见 §7。
+**一条此前的声明已撤回。** 本页曾写"Migo 在 220k 时机身更凉(62.4 vs 66.1°C),因为它把负载分摊到三个 CPU 集群而 WebView 顶死大核"。2026-08-23 重测复现不出来:两侧 SoC 峰值分别为 WebView 62.5/64.6°C、Migo 64.2/65.1°C,Migo 略高;频率采样显示两次运行 governor 都把集群拉到了 2861 MHz。原声明只测过一次,这次撤回。
 
 ## 5. 测量方法(系统级、app 无关、可审计)
 
+### 5.1 2026-08-23 修正的三处口径问题
+
+在这次重测之前,两侧测的不完全是同一件事。三处都已修正,方向不同:
+
+1. **可玩耗时的信号不同源(对 Migo 有利)。** WebView 侧由游戏自己在首帧调 `AndroidBench.ready()`;Migo 侧用的是引擎的 `onGameReady`,它在**模块求值结束、首帧之前**触发。实测这两点相差 **32 ms**。现在两侧都由游戏的同一行代码触发——migo shell 用前置脚本注入同名的 `AndroidBench`,经 `gameLog` 通道回到宿主。
+2. **shell 结构不对称(对 Migo 不利)。** Migo shell 是两个 Activity,并且**每次启动都把整个游戏包从 assets 拷到 filesDir**;WebView shell 是一个 Activity,直接从 `file:///android_asset/` 读。测量窗口里因此多了一次 Activity 跳转和一次全量拷贝。现在两侧各一个 Activity,解包改为按游戏版本一次(真实宿主也是安装/下载时解一次,不是每次启动重解)。
+3. **Migo 跑在 debug 配置下(对 Migo 不利)。** `setDebugEnabled(true)` 会注册一个 WebView 侧没有对应物的 console 环形缓冲。现已关闭,与出货配置一致。
+
+`setCodeSigningEnabled(false)` 保留:WebView 除 APK 签名外本就不做逐文件校验,只在一侧开启等于测一个对方没有的功能。
+
+### 5.2 交错测量(为什么不能跨时段比)
+
+设备状态会随时间漂移。同一份未改动的 WebView shell,在一夜的测试中读数在 **380–524 ms** 之间变动——不是热节流(SoC 36.9°C、电池 34°C),而是设备状态的慢漂移。**任何跨时段的 A/B 都不可信。**
+
+本页所有稳态数字都用交错测量:每个游戏 WebView 与 Migo 背靠背各跑一次为一轮,共三轮,取每格的中位数。压力曲线另有温度门(§4)。
+
+### 5.3 各项口径
+
 - **内存**:`dumpsys meminfo`,WebView 求和主进程 + `:sandboxed_process`。
-- **启动**:系统 `am` 的 `Displayed` + `Fully drawn`;不解析 app 日志,以"游戏就绪"(`Fully drawn`)为准——首帧(`Displayed`)对 WebView 是空白窗口先绘制,两侧不可比。
-- **帧率**:优先 SurfaceFlinger `--latency`;个别设备(如本轮测试机所在的 EMUI)会屏蔽该接口(全 0),此时回退到游戏自身的 rAF 遥测(两侧同源、口径一致),每行数据记录 `fps_source`。
-- **CPU**:`/proc/<pid>/stat` 增量(WebView 含渲染进程);取多窗口中位数,并在采样前唤醒屏幕以避免偶发的坏窗口。
-- **压力测试**:游戏内确定性精灵 ramp(Pixi ticker,两侧一致的驱动逻辑)。
-- **朝向**:WebView 锁竖屏(浏览器按设备自然朝向渲染);Migo 按 game.json 原生朝向——两边均渲染整局、像素预算相同。
+- **启动**:系统 `am` 的 `Displayed` + `Fully drawn`,不解析 app 日志。首帧(`Displayed`)对 WebView 是空白窗口先绘制,两侧含义不同,但两个数都列出。
+- **帧率**:优先 SurfaceFlinger `--latency`;个别设备(如本轮测试机所在的 EMUI)会屏蔽该接口(全 0),此时回退到游戏自身的 rAF 遥测(两侧同源),每行数据记录 `fps_source`。
+- **CPU**:`/proc/<pid>/stat` 增量(WebView 含渲染进程);取多窗口中位数。
+- **朝向**:WebView 锁竖屏;Migo 按 game.json 原生朝向——两边均渲染整局、像素预算相同。
 - **稳定性**:采集前强制亮屏(`svc power stayon`)。
-- **热管理**:高负载下 SoC 会降频;两侧背靠背测试并在每局之间冷却,相对对比公平;绝对值会随设备热状态浮动。
 
-## 6. 已知局限 / 下一步
+## 6. 集成成本(用户从不打开小游戏时,宿主付出什么)
 
-- 目前只测过一台高端设备(华为 Mate30 Pro,麒麟 990)。中端与低端设备是下一步核心测试——预计内存与启动的领先幅度在低端机上会更明显。
-- 功耗目前用 CPU 占用作代理(测试机的电量统计接口受限,无法直接读取放电功耗);真实功耗待换用无此限制的设备或外接功率计验证。
-- 绝对时延/温度数值会随环境与设备热状态浮动;本页给出的是同 session、背靠背的相对对比。
+最小宿主 App,三种集成方式,单 ABI(arm64-v8a),Mate30 Pro,五次冷启动中位数:
 
-## 7. 复现
+| 集成方式 | APK 净增 | 宿主冷启增量 | 常驻内存增量 |
+|---|---:|---:|---:|
+| 不带 Migo(基线) | — | 280 ms | 35.4 MB |
+| 完整 AAR | **+44.8 MB** | **0 ms**(277 ms) | **+1.1 MB**(36.5 MB) |
+| 完整 AAR + 宿主调用 `MigoRuntime.getInstance()` | +44.8 MB | **0 ms**(278 ms) | +1.1 MB |
+| `-nojni` AAR(引擎按需下载) | **+0.23 MB** | **0 ms**(280 ms) | +1.1 MB |
+
+- APK 净增是**磁盘上的**大小(`.so` 在 APK 里不压缩存储);商店**下载**增量约 +17 MB。
+- 冷启增量为零、常驻内存只增约 1 MB(即 SDK 那点 dex),是因为引擎在第一次真正需要之前不会被加载——即使宿主已经拿到了 `MigoRuntime` 实例。
+- `-nojni` 是同一次构建删掉 `jni/**` 得到的产物,引擎在用户第一次打开小游戏时由宿主交付并按内嵌 manifest 校验。
+
+## 7. 已知局限 / 下一步
+
+- 目前只测过一台高端设备(华为 Mate30 Pro,麒麟 990)。中端与低端设备是下一步核心测试。
+- 功耗目前用 CPU 占用作代理(测试机的电量统计接口受限);真实功耗待换用无此限制的设备或外接功率计验证。
+- 绝对数值会随设备状态浮动;本页给出的是同轮次、背靠背的相对对比(§5.2)。
+- endless-runner 的可玩耗时在噪声内,不应作为领先项引用(§1)。
+
+## 8. 复现
 
 ```bash
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 # Migo release AAR(出货配置):scripts/build-aar.sh release arm64-v8a(在 migo 仓库里)
-bash scripts/run.sh --runtime webview --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3
-bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --duration 60 --cold-runs 3 --migo-aar local:.../migo-release.aar
-bash scripts/run.sh --runtime migo    --game bunnymark --device <SERIAL> --scenario stress --duration 55 --migo-aar local:...
+
+# 交错测量:每轮内两侧背靠背,重复三轮后取每格中位数(§5.2)
+for round in 1 2 3; do for g in bunnymark canvasmark endless-runner; do
+  bash scripts/run.sh --runtime webview --game $g --device <SERIAL> --duration 12 --cold-runs 3
+  bash scripts/run.sh --runtime migo    --game $g --device <SERIAL> --duration 12 --cold-runs 3 \
+       --migo-aar <path/to/migo-release.aar>
+done; done
 python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
 
 # 控温 stress A/B(冷却门到同温冷态 + 三 cluster 频率采样 + 各跑 2 次;见 §4):
