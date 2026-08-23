@@ -147,6 +147,26 @@ rendering checked by sampling pixels.
 > frame. A fast runtime that renders a ninth of the screen is fast for the wrong
 > reason.
 
+## 11a. "Initialised" is not "worked" — for audio, prove it with sound.
+
+`AudioThread (lazy) started` and `Audio output device: Ok("default")` say a
+stream was opened. They say nothing about whether a single frame reached the
+speaker, and the difference is invisible in the log.
+
+endless-runner is the trap: it opens an audio context and **ships no audio files
+at all** (the bundle is html/js/md/txt, nothing else). So it emits exactly those
+lines and stays silent, correctly. A packaging change was once checked against
+that and looked verified while nothing had ever played.
+
+`shells/migo-shell/app/src/main/assets/game-audio-probe` exists for this: it
+generates a 6-second tone through WebAudio, so the output path runs with no
+decoder and no bundled media involved. The device-side tell is the gap between
+`AudioThread (lazy) started` and `AudioThread entered idle sleep` — the tone's
+duration plus the ~3 s idle timeout if frames flowed, ~3 s flat if they did not.
+
+> **Rule.** Verify audio with a probe that makes a sound, and read the idle-sleep
+> gap rather than the "started" line. Then listen to it.
+
 ## 12. Keep the front door and the results page in sync.
 
 `README.md`, `README.zh-CN.md` and `assets/headline-*.svg` all carry numbers.
@@ -171,5 +191,7 @@ while RESULTS.md said 3 of 3 and 47–61%.
 7. Three rounds interleaved, median per cell, ranges kept — publish the range
    whenever the medians are within ~10%.
 8. Full-frame rendering verified by pixels on both sides.
-9. `RESULTS.md` + `RESULTS.en.md` + both READMEs + headline SVGs + `migo-www`
-   updated together, and anything withdrawn is said to be withdrawn.
+9. Audio, if it is in scope, verified with `game-audio-probe` and actually
+   heard — not inferred from "AudioThread started".
+10. `RESULTS.md` + `RESULTS.en.md` + both READMEs + headline SVGs + `migo-www`
+    updated together, and anything withdrawn is said to be withdrawn.
