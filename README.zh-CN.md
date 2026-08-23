@@ -60,7 +60,7 @@ tests/       parse.py + compare.py fixture tests
 
 ## 测试纪律
 
-**[MEASURING.md](MEASURING.md) —— 怎么在这里取数而不骗自己。** 十二个陷阱,每一个都已经
+**[MEASURING.md](MEASURING.md) —— 怎么在这里取数而不骗自己。** 十三个陷阱,每一个都已经
 让这个仓库付出过代价:一个发布错的数字,或者白干一天。重新测量之前先读它。
 
 

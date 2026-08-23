@@ -27,7 +27,7 @@ TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endl
 ✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): the knee is at 40,000 sprites on both sides and the curve is level or 1 fps in Migo's favour the whole way. An earlier version of this line also claimed Migo ran cooler; that did not reproduce on 2026-08-23 and has been withdrawn — see RESULTS §4.
 
 **[MEASURING.md](MEASURING.md)** — how to take a number here without fooling yourself.
-Twelve traps, each one of which has already cost this repo a wrong published number or a
+Thirteen traps, each one of which has already cost this repo a wrong published number or a
 wasted day. Read it before you re-measure anything.
 
 ## What it measures (and the honest weighting)

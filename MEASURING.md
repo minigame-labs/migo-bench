@@ -147,7 +147,7 @@ rendering checked by sampling pixels.
 > frame. A fast runtime that renders a ninth of the screen is fast for the wrong
 > reason.
 
-## 11a. "Initialised" is not "worked" — for audio, prove it with sound.
+## 12. "Initialised" is not "worked" — for audio, prove it with sound.
 
 `AudioThread (lazy) started` and `Audio output device: Ok("default")` say a
 stream was opened. They say nothing about whether a single frame reached the
@@ -167,7 +167,7 @@ duration plus the ~3 s idle timeout if frames flowed, ~3 s flat if they did not.
 > **Rule.** Verify audio with a probe that makes a sound, and read the idle-sleep
 > gap rather than the "started" line. Then listen to it.
 
-## 12. Keep the front door and the results page in sync.
+## 13. Keep the front door and the results page in sync.
 
 `README.md`, `README.zh-CN.md` and `assets/headline-*.svg` all carry numbers.
 The SVGs are generated — `python3 scripts/make-headline-chart.py` — from a data
