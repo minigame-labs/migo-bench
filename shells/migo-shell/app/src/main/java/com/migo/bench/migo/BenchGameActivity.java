@@ -81,6 +81,15 @@ public class BenchGameActivity extends MigoGameActivity {
                 // side than the other, in Migo's favour, and the published
                 // game-ready margins were overstated by that much.
                 .addPreludeScript("bench-ready-bridge", BENCH_READY_BRIDGE);
+        // Diagnostics only, and off unless asked for: `--es migo_log_level info`
+        // turns on the engine's own startup trace (host and JsRuntime init, GPU
+        // caps, module load and evaluate, per-op stalls), which is how the
+        // startup budget gets attributed to a phase rather than guessed at.
+        // Never pass it in a measured run -- INFO logging is itself a cost.
+        String lvl = getIntent().getStringExtra("migo_log_level");
+        if ("info".equalsIgnoreCase(lvl)) {
+            builder.setLogLevel(RuntimeConfig.LogLevel.INFO);
+        }
         // Honour the game's declared orientation (game.json `deviceOrientation`)
         // so landscape games rotate before the surface is created and the runtime
         // boots against the correctly-sized surface.
