@@ -1,4 +1,14 @@
-# On-device JS profiling (Migo)
+# On-device profiling (Migo)
+
+Two different questions, two different tools:
+
+- **"Which JS function is hot?"** — steady-state, per-frame work. V8's `--prof`
+  sampling profiler, below. Needs a debug AAR.
+- **"Where did the 650 ms of cold start go?"** — the engine already instruments
+  its own startup phases; see [Attributing the startup budget](#attributing-the-startup-budget-no-debug-aar-needed).
+  Works on a release build.
+
+## JS function-level profiling
 
 Function-level CPU profiling of the Migo runtime on a real device, **without
 perf_event** (Huawei/EMUI blocks it, so `simpleperf` fails). Uses V8's built-in
