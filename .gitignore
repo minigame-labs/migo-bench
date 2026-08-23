@@ -14,3 +14,7 @@ shells/*/app/src/main/assets/game-stress/*.js
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Conformance bundles are copied in by migo-conformance runners at run time.
+shells/*/app/src/main/assets/game-conf-*/
+shells/*/app/src/main/assets/game-callbacks/
