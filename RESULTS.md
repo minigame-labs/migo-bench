@@ -2,6 +2,7 @@
 
 > 中文为默认版本;英文见 [RESULTS.en.md](RESULTS.en.md)。
 > 原始数据:`out/results.csv`(稳态)、`out/stress_*.csv`(压力曲线)。每行都带完整溯源(Migo 版本、设备、WebView 版本、时间戳、`fps_source`)。
+> **被测 Migo 构建:master(v0.9.3 之后,含 #109–#115),不是 v0.9.3 这个 tag。** 启动数字受 v0.9.3 之后合入的若干项影响,用 `--migo-aar release-tag:v0.9.3` 复现不出本页的启动段;内存/CPU/fps/压力曲线不受影响。下一个 tag 切出来后本页会重测并改回 tag 溯源。
 > 测试构建:Migo **release**(opt-z + LTO,出货配置),宿主配置与出货一致(`setDebugEnabled(false)`)。
 > **本页数据于 2026-08-23 全量重测。** 此前发布的数字有四处口径问题,详见 §5.1 与 §5.2.1——三处对 Migo 有利、一处不利,现已全部消除。
 

@@ -2,6 +2,7 @@
 
 > Chinese is the default; see [RESULTS.md](RESULTS.md). English mirror here.
 > Raw data: `out/results.csv` (steady), `out/stress_*.csv` (stress curve). Every row carries full provenance (Migo version, device, WebView version, timestamp, `fps_source`).
+> **Migo build under test: master (after v0.9.3, including #109–#115), not the v0.9.3 tag.** The startup figures depend on work merged after v0.9.3, so `--migo-aar release-tag:v0.9.3` will not reproduce this page's startup section; memory, CPU, fps and the stress curve are unaffected. This page will be re-measured against the next tag once it is cut.
 > Test build: Migo **release** (opt-z + LTO, the shipping config), host configured as a product would ship it (`setDebugEnabled(false)`).
 > **Everything on this page was re-measured on 2026-08-23.** The previously published numbers had four comparability defects — see §5.1 and §5.2.1. Three favoured Migo, one worked against it; all four are gone.
 
