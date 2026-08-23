@@ -72,9 +72,49 @@ public class LauncherActivity extends Activity {
             Log.e(TAG, "could not create code dir " + code);
             return;
         }
-        copyAsset(asset + "/game.js", new File(code, "game.js"));
-        copyAsset(asset + "/game.json", new File(code, "game.json"));
+        // The whole bundle, not just its two required files. This used to copy
+        // game.js and game.json by name, so any bundle carrying an asset -- a
+        // font, an image, a sub-package -- arrived on the device without it,
+        // and the game failed at runtime with no sign of why. Text conformance
+        // has to ship its own typeface, which is how that surfaced.
+        copyAssetTree(asset, code);
         Log.i(TAG, "deployed game '" + asset + "' -> " + code.getAbsolutePath());
+    }
+
+    /** Copy an assets/ subtree onto disk, creating directories as it goes. */
+    private void copyAssetTree(String assetDir, File destDir) {
+        String[] names;
+        try {
+            names = getAssets().list(assetDir);
+        } catch (Exception e) {
+            Log.e(TAG, "could not list assets in " + assetDir + ": " + e);
+            return;
+        }
+        if (names == null) {
+            return;
+        }
+        for (String name : names) {
+            String child = assetDir + "/" + name;
+            String[] grandchildren;
+            try {
+                grandchildren = getAssets().list(child);
+            } catch (Exception e) {
+                grandchildren = null;
+            }
+            // AssetManager has no isDirectory: a directory lists children, a
+            // file lists none. An empty directory is indistinguishable from a
+            // file here and there is no reason for a bundle to contain one.
+            if (grandchildren != null && grandchildren.length > 0) {
+                File sub = new File(destDir, name);
+                if (!sub.exists() && !sub.mkdirs()) {
+                    Log.e(TAG, "could not create " + sub);
+                    continue;
+                }
+                copyAssetTree(child, sub);
+            } else {
+                copyAsset(child, new File(destDir, name));
+            }
+        }
     }
 
     private void copyAsset(String assetPath, File dest) {
