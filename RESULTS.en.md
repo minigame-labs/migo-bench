@@ -3,7 +3,7 @@
 > Chinese is the default; see [RESULTS.md](RESULTS.md). English mirror here.
 > Raw data: `out/results.csv` (steady), `out/stress_*.csv` (stress curve). Every row carries full provenance (Migo version, device, WebView version, timestamp, `fps_source`).
 > Test build: Migo **release** (opt-z + LTO, the shipping config), host configured as a product would ship it (`setDebugEnabled(false)`).
-> **Everything on this page was re-measured on 2026-08-23.** The previously published numbers had three comparability defects — see §5.1. Two favoured Migo, one worked against it; all three are gone.
+> **Everything on this page was re-measured on 2026-08-23.** The previously published numbers had four comparability defects — see §5.1 and §5.2.1. Three favoured Migo, one worked against it; all four are gone.
 
 ## 1. TL;DR
 
@@ -11,10 +11,10 @@ Same game, same device, same interaction. **Migo native runtime (release)** vs *
 
 - ✅ **Memory: Migo uses 47–61% less** (bunnymark 111 vs 225, endless-runner 201 vs 379, canvasmark 85 vs 220 MB). Fair accounting: WebView counts its separate chromium renderer process (else ~100MB is missed).
 - ✅ **CPU: Migo at a third to a half of WebView (2.3–3.0×)** — bunnymark 2.8×, endless-runner 3.0×, canvasmark 2.3×.
-- ✅ **Startup: faster on all six measurements** — three games × two metrics. First frame 13–55% faster, game-ready 4–39% faster.
+- ✅ **Startup: faster on all six measurements** — three games × two metrics. First frame 18–38% faster, game-ready 6–25% faster.
 - = **fps: a tie.** Both sides hold a 60 fps median; 1% low is Migo 59, WebView 60.
 - = **Heavy load: a tie.** Stressed to 220,000 sprites, the knee is at 40,000 on both sides and the curve is level or 1 fps in Migo's favour.
-- ⚠️ **endless-runner game-ready is a tie, not a lead**: Migo 628/633/749 ms across three rounds against WebView 647/658/664. The ranges overlap; calling it "4% faster" overstates it.
+- ⚠️ **endless-runner game-ready is a thin lead**: Migo 609/577/695 ms across three rounds against WebView 646/647/666. The medians are 609 against 647, but Migo's range is much the wider and its top crosses WebView's, so read this one as "slightly faster" rather than as 6%.
 
 > Note: high-end device only so far (Kirin 990). Mid- and low-end devices should widen the memory/startup gaps further — the key next test.
 
@@ -36,8 +36,8 @@ Each cell is the **median of three interleaved rounds** (see §5.2); within a ro
 |---|---|---|---|
 | PSS peak | 225 MB | 111 MB | 51% less |
 | CPU (multicore) | 127% | 46% | 2.8× less |
-| First frame (`Displayed`) | 522 ms | 235 ms | 55% faster |
-| Game-ready (`Fully drawn`) | 650 ms | 399 ms | 39% faster |
+| First frame (`Displayed`) | 354 ms | 218 ms | 38% faster |
+| Game-ready (`Fully drawn`) | 529 ms | 397 ms | 25% faster |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 
 ### 3.2 endless-runner (Phaser/WebGL)
@@ -46,8 +46,8 @@ Each cell is the **median of three interleaved rounds** (see §5.2); within a ro
 |---|---|---|---|
 | PSS peak | 379 MB | 201 MB | 47% less |
 | CPU (multicore) | 134% | 44% | 3.0× less |
-| First frame | 380 ms | 329 ms | 13% faster |
-| Game-ready | 658 ms | 633 ms | **tie** (overlapping ranges, see §1) |
+| First frame | 350 ms | 286 ms | 18% faster |
+| Game-ready | 647 ms | 609 ms | slightly faster (wide range, see §1) |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 
 WebView renders portrait fit-scaled, Migo natively landscape (per game.json) — both render the whole game at the same pixel budget.
@@ -58,8 +58,8 @@ WebView renders portrait fit-scaled, Migo natively landscape (per game.json) —
 |---|---|---|---|
 | PSS (steady) | 220 MB | 85 MB | 61% less |
 | CPU (multicore) | 171% | 74% | 2.3× less |
-| First frame | 377 ms | 233 ms | 38% faster |
-| Game-ready | 376 ms | 322 ms | 14% faster |
+| First frame | 353 ms | 219 ms | 38% faster |
+| Game-ready | 376 ms | 326 ms | 13% faster |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 
 The Canvas2D path costs both sides more CPU than WebGL, so the CPU lead is smaller here. That is expected.
@@ -98,6 +98,23 @@ Before this re-measurement the two sides were not measuring the same thing. All 
 Device state drifts. The same unmodified WebView shell read anywhere from **380 to 524 ms** across one night of testing — not thermal throttling (SoC 36.9 °C, battery 34 °C), but slow drift in device state. **Any A/B taken across sessions is untrustworthy.**
 
 Every steady-state number on this page comes from interleaved measurement: one round is WebView and Migo back to back on the same game, three rounds, median per cell. The stress curve additionally uses a temperature gate (§4).
+
+### 5.2.1 A just-installed APK is not steady state (corrected 2026-08-23)
+
+The bunnymark startup numbers published on this page before 2026-08-23 **overstated
+WebView**: first frame was given as 522 ms and game-ready as 650 ms, against a
+re-measured steady state of 354 / 529 ms. That is 170 / 120 ms, in Migo's favour.
+
+The cause was that the WebView shell had just been `adb install`ed when that round
+was taken. A freshly installed APK has not been dex-optimised yet, and its first few
+cold starts are measurably slower — and slower *monotonically*, not noisily: six
+consecutive launches after a reinstall read 414 → 371 → 347 → …, settling at
+338–360. Interleaving cancels device drift; it cannot cancel this, because this
+applies to one side only — only the WebView shell had just been installed.
+
+So the protocol gains a rule: **both shells must already be installed and have run at
+least three times each before any number is recorded.** Nor should an install sit
+between two measurements — writing a 361 MB APK perturbs the cold start right after it.
 
 ### 5.3 Per-metric definitions
 
