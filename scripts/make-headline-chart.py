@@ -7,20 +7,25 @@ bar chart over the three benchmark games. Migo = blue (the subject), WebView = g
 rests on color alone. Emits assets/headline-light.svg and assets/headline-dark.svg;
 the README references both via <picture> so GitHub shows the right one per theme.
 
-Numbers are the Mate30 Pro release re-run in RESULTS.md (§3.1/§3.4/§3.2). Update
+Numbers are the Mate30 Pro release re-run in RESULTS.md (§3.1/§3.2/§3.3). Update
 them here and re-run:  python3 scripts/make-headline-chart.py
+
+They must match RESULTS.md, and for a while they did not: this file kept a set
+from an earlier run (startup "faster 2 of 3", memory "~42%") for long enough that
+the README's headline contradicted the results page it linked to. If you re-measure,
+this file is part of the re-measurement.
 """
 import os
 
 GAMES = ["Bunnymark", "Endless", "Canvasmark"]  # Pixi / Phaser / Canvas2D
 # metric -> (unit, subtitle, lower_is_better, {game: (webview, migo)})
 PANELS = [
-    ("Memory", "MB PSS", "Migo ~42% less", {
-        "Bunnymark": (227, 132), "Endless": (382, 226), "Canvasmark": (213, 118)}),
-    ("CPU", "% multi-core", "Migo ~2x less", {
-        "Bunnymark": (118, 46), "Endless": (127, 44), "Canvasmark": (160, 83)}),
-    ("Startup", "ms to game-ready", "Migo faster (2 of 3)", {
-        "Bunnymark": (697, 495), "Endless": (671, 710), "Canvasmark": (517, 473)}),
+    ("Memory", "MB PSS", "Migo 47-61% less", {
+        "Bunnymark": (225, 111), "Endless": (379, 201), "Canvasmark": (220, 85)}),
+    ("CPU", "% multi-core", "Migo 2.3-3.0x less", {
+        "Bunnymark": (127, 46), "Endless": (134, 44), "Canvasmark": (171, 74)}),
+    ("Startup", "ms to game-ready", "Migo faster (3 of 3)", {
+        "Bunnymark": (529, 397), "Endless": (647, 609), "Canvasmark": (376, 326)}),
 ]
 
 THEMES = {

@@ -7,7 +7,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
-  <img alt="Migo vs Android System WebView across three games: memory ~42% lower, CPU ~2x lower, startup faster; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+  <img alt="Migo vs Android System WebView across three games: memory 47-61% lower, CPU 2.3-3.0x lower, game-ready faster on all three; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
 </picture>
 
 <sub>Mate30 Pro · release 构建 · 3 款游戏(Pixi/WebGL、Phaser/WebGL、Canvas2D)· 每根柱子都可溯源到一个钉死的 Migo 版本。完整逐指标数据表 → **[RESULTS.md](RESULTS.md)**(中文)/ **[RESULTS.en.md](RESULTS.en.md)**。</sub>
@@ -22,8 +22,8 @@
 
 **[RESULTS.md(中文,默认)](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** ——
 设备 × 游戏矩阵 + 逐指标数据表(内存、启动、fps + 压力曲线、CPU、能耗)。
-Mate30 Pro 上的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),均已核对满屏渲染:**内存 Migo 少约 40–45% · CPU 少约 1.9–2.9× · 游戏就绪多数更快 · 常规负载下 fps 近乎打平(~58 vs 60)。**
-✅ **重载扩展性依然稳健** —— 压测到 22 万个精灵(远超任何真实小游戏的常规负载):Migo 全曲线与 WebView 打平,高载端还略胜一筹(10 万个精灵 32 vs 31fps,18 万个精灵 18 vs 15fps),同时运行更凉、负载分摊到全部 CPU 集群,而不是把单核顶到上限。详见 RESULTS §4。
+Mate30 Pro 上的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),均已核对满屏渲染:**内存 Migo 少 47–61% · CPU 少 2.3–3.0× · 三款游戏首帧快 18–38%、可玩快 6–25% · fps 打平(两侧中位数都是 60,1% 低帧 59 vs 60)。** 其中 endless-runner 的可玩领先最薄,引用前先看 §1。
+✅ **重载扩展性依然稳健** —— 压测到 22 万个精灵(远超任何真实小游戏的常规负载):两侧拐点都在 4 万,整条曲线逐档持平或 Migo 高 1 fps。本行早先版本还写过"Migo 运行更凉",2026-08-23 复现不出来,已撤回 —— 详见 RESULTS §4。
 
 ## 测什么(以及诚实的权重取舍)
 
@@ -59,6 +59,10 @@ tests/       parse.py + compare.py fixture tests
 ```
 
 ## 测试纪律
+
+**[MEASURING.md](MEASURING.md) —— 怎么在这里取数而不骗自己。** 十二个陷阱,每一个都已经
+让这个仓库付出过代价:一个发布错的数字,或者白干一天。重新测量之前先读它。
+
 
 - WebView 基线用的是**现代**壳(compileSdk 34)—— 绝不用老旧模板。
 - 优先展示一致性/内存;诚实报告 fps(它是打平的)。

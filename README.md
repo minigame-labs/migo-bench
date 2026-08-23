@@ -8,7 +8,7 @@ runtime that replaces the WebView" positioning.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
-  <img alt="Migo vs Android System WebView across three games: memory ~42% lower, CPU ~2x lower, startup faster; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+  <img alt="Migo vs Android System WebView across three games: memory 47-61% lower, CPU 2.3-3.0x lower, game-ready faster on all three; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
 </picture>
 
 <sub>Mate30 Pro · release build · 3 games (Pixi/WebGL, Phaser/WebGL, Canvas2D) · every bar traces to a pinned Migo version. Full per-metric tables → **[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)**.</sub>
@@ -23,8 +23,12 @@ runtime that replaces the WebView" positioning.
 
 **[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
-TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo ~40–45% less · CPU ~1.9–2.9× less · game-ready mostly faster · fps near-tie (~58 vs 60) at normal load.**
-✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): Migo ties WebView across the whole curve and edges ahead at the high end (100k 32 vs 31fps, 180k 18 vs 15fps), while running cooler and spreading work across all CPU clusters instead of pinning one core near its ceiling. See RESULTS §4.
+TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo 47–61% less · CPU 2.3–3.0× less · first frame 18–38% faster and game-ready 6–25% faster on all three · fps a tie (60 median both sides; 1% low 59 vs 60).** The endless-runner game-ready lead is the thin one — read §1 before quoting it.
+✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): the knee is at 40,000 sprites on both sides and the curve is level or 1 fps in Migo's favour the whole way. An earlier version of this line also claimed Migo ran cooler; that did not reproduce on 2026-08-23 and has been withdrawn — see RESULTS §4.
+
+**[MEASURING.md](MEASURING.md)** — how to take a number here without fooling yourself.
+Twelve traps, each one of which has already cost this repo a wrong published number or a
+wasted day. Read it before you re-measure anything.
 
 ## What it measures (and the honest weighting)
 
