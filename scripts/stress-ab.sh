@@ -15,6 +15,18 @@
 set -eu
 S="${1:?usage: stress-ab.sh <serial> <migo-release-aar> [duration]}"
 AAR="${2:?need path to a locally-built migo release AAR (scripts/build-aar.sh in the migo repo)}"
+# A plain path, not a `--migo-aar` spec: line ~66 adds the `local:` prefix
+# itself. Passing `local:/path/...` used to produce `local:local:/path/...`,
+# which failed one `cp` deep inside the capture and then let the run continue --
+# so the script printed a webview curve, no migo curve, and no error anyone
+# would read as one. A run that cannot measure both sides is not half a
+# comparison, it is none.
+case "$AAR" in
+  local:*|release-tag:*|sha:*)
+    echo "ERROR: pass a plain path, not a --migo-aar spec (got '$AAR')" >&2
+    exit 2 ;;
+esac
+[[ -f "$AAR" ]] || { echo "ERROR: no such AAR: $AAR" >&2; exit 2; }
 DUR="${3:-75}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADB_BIN="${ANDROID_HOME:+$ANDROID_HOME/platform-tools/adb}"
