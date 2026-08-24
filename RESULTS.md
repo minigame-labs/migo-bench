@@ -36,8 +36,16 @@
   726/736/686 ms,WebView 662/819/640 ms。**Migo 的读数很稳(区间 50 ms),WebView 很不稳
   (区间 179 ms)**,所以差值本身要谨慎读 —— 但 Migo 自己的区间与上一版的 609/577/695
   几乎不重叠,这更像是我们变慢了,而不是测量噪声。
-  **原因尚未查明,查清之前本页不做解释。** 最可疑的一项是 v0.9.3 之后重新生成的启动快照
-  (#119),因为可玩耗时的大头是内容自身的 module evaluation。
+  **原因仍未查明,但已经排除了两条,并且发现这一格本身比看上去更不稳:**
+  - ❌ **不是启动快照。** 曾怀疑 #119 重新生成的快照,当场用 `migo_log_level=info` 验掉了:
+    日志明确是 `using V8 startup snapshot (2167504 bytes)` / `snapshot=true`,快照正常加载。
+  - ⚠️ **module evaluation 本身波动很大。** 同一个 v0.9.4 构建连跑两次,
+    `module evaluated` 是 **265.7ms 和 196.1ms** —— 70ms 的摆幅。可玩耗时的大头就是它,
+    所以这一格的跨版本比较需要比三轮更多的样本才站得住。
+  - 📌 **附带发现(只影响这一个游戏)**:endless-runner 每次启动会触发两次
+    `canvas2d force_readback_snapshot`,各阻塞 V8 15–17ms,合计约 30ms。
+    bunnymark 与 canvasmark 各 0 次。这是 Phaser 走 `getImageData().data` 做纹理时的
+    同步 GPU 回读;机制清楚,但修它要动 canvas2d 回读管线,不在本次范围内。
 
 > 注意:目前仅测过高端机(麒麟 990)。中低端机的内存/启动差距预计更大——是下一步测试重点。
 
