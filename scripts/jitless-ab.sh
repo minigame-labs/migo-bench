@@ -99,27 +99,11 @@ ADB=("$ADB_BIN" -s "$SERIAL")
 PKG=com.migo.bench.migo
 LAUNCH=.BenchGameActivity
 
-read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
-
-# Identical thresholds to scripts/stress-ab.sh: the published stress curve is
-# gated this way, and a second gate with different numbers would make the two
-# tables quietly incomparable.
-cold_gate() {  # <label> -> prints outcome
-  local label="$1" start soc mx waited
-  start=$(date +%s)
-  while true; do
-    soc=$(read_int /sys/class/thermal/thermal_zone0/temp)
-    mx=$(read_int /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq)
-    waited=$(( $(date +%s) - start ))
-    if [[ "${soc:-99999}" -le 35000 && "${mx:-0}" -ge 2861000 ]]; then
-      echo "cold soc=${soc}mC max=${mx} waited=${waited}s"; return
-    fi
-    if [[ "$waited" -ge 420 ]]; then
-      echo "TIMEOUT waited=${waited}s soc=${soc}mC max=${mx} PROCEEDED-UNGATED"; return
-    fi
-    sleep 5
-  done
-}
+# The gate lives in lib.sh, shared with the webview-vs-migo matrix driver.
+# Two copies of it would let two tables drift apart on the one thing that makes
+# them comparable.
+# shellcheck source=lib.sh
+SERIAL="$SERIAL" . "$DIR/lib.sh"
 
 AB="$OUT/jitless_ab.csv"
 if [[ ! -f "$AB" ]]; then
@@ -172,7 +156,17 @@ for (( round=1; round<=ROUNDS; round++ )); do
         echo "[ab]   run appended no row; nothing to record" >&2
         continue
       fi
+      # Take the row, then take it back out of results.csv.
+      #
+      # run.sh appends to the shared steady-state table, and these rows are not
+      # steady-state Migo numbers -- half of them are a jitless build. Left
+      # there they are indistinguishable from a normal run (same `runtime=migo`,
+      # same version string, since both arms come from one tree), so anything
+      # that reads results.csv for "what Migo does" would quietly average a
+      # crippled build into a published claim. The portal's benchmark figures
+      # are transcribed from exactly that file.
       printf '%s,%s,"%s",%s\n' "$round" "$arm" "$gate" "$(tail -1 "$OUT/results.csv")" >> "$AB"
+      sed -i '$d' "$OUT/results.csv"
       echo "[ab]   recorded: $(tail -1 "$AB" | cut -d, -f1-3,13-)"
     done
   done

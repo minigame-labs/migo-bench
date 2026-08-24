@@ -42,6 +42,37 @@ require_one_device() {
 
 adbsh() { "${ADB[@]}" shell "$@"; }
 
+# ---------------------------------------------------------------------------
+# The cold gate.
+#
+# MEASURING.md §4: every measurement waits for the same device state first, and
+# the gate must report its own timeout -- a silent "waited forever then
+# proceeded" turns a gated run into an ungated one that still looks gated.
+#
+# It lives here because two drivers need it and a second copy is how two tables
+# end up quietly incomparable: the thresholds *are* the comparison. Kirin 990,
+# where the big-cluster thermal cap and the util-driven governor both move the
+# result: soc <= 35 C and cpu7 back at its full 2861 MHz.
+# ---------------------------------------------------------------------------
+_gate_read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
+
+cold_gate() {  # <label> -> prints the outcome, never fails the run
+  local label="${1:-}" start soc mx waited
+  start=$(date +%s)
+  while true; do
+    soc=$(_gate_read_int /sys/class/thermal/thermal_zone0/temp)
+    mx=$(_gate_read_int /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq)
+    waited=$(( $(date +%s) - start ))
+    if [ "${soc:-99999}" -le 35000 ] && [ "${mx:-0}" -ge 2861000 ]; then
+      echo "cold soc=${soc}mC max=${mx} waited=${waited}s"; return 0
+    fi
+    if [ "$waited" -ge 420 ]; then
+      echo "TIMEOUT waited=${waited}s soc=${soc}mC max=${mx} PROCEEDED-UNGATED"; return 0
+    fi
+    sleep 5
+  done
+}
+
 # provenance_kv <pkg>  -> key=value lines (migo_version filled by the caller)
 provenance_kv() {
   echo "device_model=$(adbsh getprop ro.product.model | tr -d '\r')"
