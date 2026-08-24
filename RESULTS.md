@@ -2,9 +2,20 @@
 
 > 中文为默认版本;英文见 [RESULTS.en.md](RESULTS.en.md)。
 > 原始数据:`out/results.csv`(稳态)、`out/stress_*.csv`(压力曲线)。每行都带完整溯源(Migo 版本、设备、WebView 版本、时间戳、`fps_source`)。
-> **被测 Migo 构建:master(v0.9.3 之后,含 #109–#115),不是 v0.9.3 这个 tag。** 启动数字受 v0.9.3 之后合入的若干项影响,用 `--migo-aar release-tag:v0.9.3` 复现不出本页的启动段;内存/CPU/fps/压力曲线不受影响。下一个 tag 切出来后本页会重测并改回 tag 溯源。
+> **被测 Migo 构建:`release-tag:v0.9.4`** —— 发布页上能下载的那个 AAR,不是某个 master 提交。
+> 上一版本页锚定的是「master(v0.9.3 之后)」,任何人都复现不出来;2026-08-25 已按本页自己
+> 写下的计划重测并改回 tag 溯源。原始数据 `out/matrix.csv`(18 行,三轮交错,逐格温控门结论
+> 随行记录),归约口径由 `scripts/matrix-summary.py` 固定(中位数 + 保留区间)。
 > 测试构建:Migo **release**(opt-z + LTO,出货配置),宿主配置与出货一致(`setDebugEnabled(false)`)。
-> **本页数据于 2026-08-23 全量重测。** 此前发布的数字有四处口径问题,详见 §5.1 与 §5.2.1——三处对 Migo 有利、一处不利,现已全部消除。
+> **本页数据于 2026-08-25 全量重测(v0.9.4)。** 与 08-23 那一版存在两处差异,读之前要知道:
+>
+> 1. **装置修了一处,数字因此可比性变了。** 采集脚本此前**每次运行前都 `adb install`**,
+>    而本页方法学第 2 条写的是轮次之间不要装 —— 那条规矩从来没有真正生效过,一行都没有。
+>    install 会重置 ART profile,紧随其后的启动跑的不是稳态 AOT 代码,正是 §5.2.1 里那次
+>    把 WebView 首帧写成 522 ms 的机制。现在只在 APK 内容真的变了时才装,并在矩阵开跑前
+>    各跑一次丢弃。实测把 WebView 的 bunnymark 首帧读数从 375 拉回 345 ms。
+>    **所以本页与上一版的差异不只是版本差异,还有方法学差异。**
+> 2. **`endless-runner` 的可玩耗时方向变了,现在是我们输**,见 §1。原因尚未查明,不做解释。
 
 > **另一份报告:[JITLESS.md](JITLESS.md)** —— 无 JIT 的 V8 要付多少代价(HarmonyOS NEXT 禁止
 > 第三方 JIT,那份数据决定 NEXT 能不能谈性能)。它和本页是两个问题:本页比的是 Migo 与
@@ -14,12 +25,19 @@
 
 同一游戏、同一设备、同一交互,**Migo 原生运行时(release)** vs **Android 系统 WebView**。定位:Migo = 源码可得的原生 WebView 替代。
 
-- ✅ **内存:Migo 少 47–61%**(bunnymark 111 vs 225、endless-runner 201 vs 379、canvasmark 85 vs 220 MB)。公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。
-- ✅ **CPU:Migo 用 WebView 的 1/3 到 1/2(2.3–3.0×)**——bunnymark 2.8×、endless-runner 3.0×、canvasmark 2.3×。
-- ✅ **启动:三款游戏、两项指标,六项全部更快。** 首帧快 18–38%,可玩快 6–25%。
+- ✅ **内存:Migo 少 49–62%**(bunnymark 108 vs 236、endless-runner 201 vs 390、canvasmark 86 vs 225 MB)。公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。
+- ✅ **CPU:Migo 用 WebView 的 1/3 到 1/2(2.5–2.9×)**——bunnymark 2.8×、endless-runner 2.9×、canvasmark 2.5×。
+- ✅ **启动:六项里五项更快。** 首帧三款全胜(快 7% / 36% / 53%),可玩两胜一负
+  (bunnymark 快 23%、canvasmark 快 34%、**endless-runner 慢 10%**)。
+  上一版写的是"六项全部更快",现在不成立。
 - = **帧率:打平。** 两侧中位数都是 60 fps;1% 低帧 Migo 59、WebView 60。
 - = **重载扩展性:打平。** 压到 220,000 精灵,拐点两边都在 40,000,曲线逐档持平或 Migo 高 1 fps。
-- ⚠️ **endless-runner 的可玩耗时领先很薄**:Migo 三轮 609/577/695 ms,WebView 646/647/666 ms。中位数 609 vs 647 是领先,但 Migo 的区间比 WebView 宽得多且上沿越过它,所以这一项当作"略快"读,不要当作 6%。
+- 🔴 **`endless-runner` 的可玩耗时:上一版说"略快",本版是慢 10%。** Migo 三轮
+  726/736/686 ms,WebView 662/819/640 ms。**Migo 的读数很稳(区间 50 ms),WebView 很不稳
+  (区间 179 ms)**,所以差值本身要谨慎读 —— 但 Migo 自己的区间与上一版的 609/577/695
+  几乎不重叠,这更像是我们变慢了,而不是测量噪声。
+  **原因尚未查明,查清之前本页不做解释。** 最可疑的一项是 v0.9.3 之后重新生成的启动快照
+  (#119),因为可玩耗时的大头是内容自身的 module evaluation。
 
 > 注意:目前仅测过高端机(麒麟 990)。中低端机的内存/启动差距预计更大——是下一步测试重点。
 

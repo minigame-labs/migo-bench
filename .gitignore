@@ -1,5 +1,10 @@
 out/*
 !out/results.csv
+# The raw rows behind the published table. RESULTS.md names this file as the
+# source, and a document that points at data the repository does not contain is
+# how the last provenance chain broke: the page said "re-measured 2026-08-23"
+# while the newest committed row was 08-15.
+!out/matrix.csv
 **/build/
 **/.gradle/
 *.apk
