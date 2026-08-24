@@ -26,6 +26,14 @@ device × game matrix + per-metric tables (memory, startup, fps + stress curve, 
 TL;DR on Mate30 Pro, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), all verified rendering full-screen: **memory Migo 47–61% less · CPU 2.3–3.0× less · first frame 18–38% faster and game-ready 6–25% faster on all three · fps a tie (60 median both sides; 1% low 59 vs 60).** The endless-runner game-ready lead is the thin one — read §1 before quoting it.
 ✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): the knee is at 40,000 sprites on both sides and the curve is level or 1 fps in Migo's favour the whole way. An earlier version of this line also claimed Migo ran cooler; that did not reproduce on 2026-08-23 and has been withdrawn — see RESULTS §4.
 
+**[JITLESS.md](JITLESS.md)** — what a V8 that cannot generate code costs, measured on
+hardware. HarmonyOS NEXT forbids third-party JIT, so this is the number that decides whether
+Migo's performance there may be spoken about at all. Two findings: `--jitless` does not slow
+WebAssembly down, it **removes** it (`typeof WebAssembly === "undefined"`); and while the three
+steady-state games all tie at a vsync-capped 60 fps, the stress ramp shows the cap was hiding
+everything — the 60 fps knee moves from **40,000 sprites to 2,000**, and at equal load jitless
+returns 2.4× to 16× fewer frames.
+
 **[MEASURING.md](MEASURING.md)** — how to take a number here without fooling yourself.
 Thirteen traps, each one of which has already cost this repo a wrong published number or a
 wasted day. Read it before you re-measure anything.

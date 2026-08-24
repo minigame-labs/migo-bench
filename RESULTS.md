@@ -6,6 +6,10 @@
 > 测试构建:Migo **release**(opt-z + LTO,出货配置),宿主配置与出货一致(`setDebugEnabled(false)`)。
 > **本页数据于 2026-08-23 全量重测。** 此前发布的数字有四处口径问题,详见 §5.1 与 §5.2.1——三处对 Migo 有利、一处不利,现已全部消除。
 
+> **另一份报告:[JITLESS.md](JITLESS.md)** —— 无 JIT 的 V8 要付多少代价(HarmonyOS NEXT 禁止
+> 第三方 JIT,那份数据决定 NEXT 能不能谈性能)。它和本页是两个问题:本页比的是 Migo 与
+> WebView,那页比的是同一个 Migo 的两种 V8 配置。
+
 ## 1. 结论先行
 
 同一游戏、同一设备、同一交互,**Migo 原生运行时(release)** vs **Android 系统 WebView**。定位:Migo = 源码可得的原生 WebView 替代。
