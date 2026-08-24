@@ -18,7 +18,7 @@ SHELL_DIR="$DIR/../shells/migo-shell"; pfx="$OUT/$LABEL"
 
 [[ -f "$SHELL_DIR/app/libs/migo.aar" ]] || { echo "ERROR: migo.aar not staged (run resolve-migo-aar.sh)" >&2; exit 2; }
 ( cd "$SHELL_DIR" && ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}" ./gradlew -q :app:assembleDebug )
-"${ADB[@]}" install -r -d "$SHELL_DIR/app/build/outputs/apk/debug/app-debug.apk" >/dev/null
+install_if_changed "$PKG" "$SHELL_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
 if [ "$SCEN" = stress ]; then
   capture_stress "$PKG" "$LAUNCH" "$DUR" "${pfx}_stress.txt"

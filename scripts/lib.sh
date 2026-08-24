@@ -43,6 +43,41 @@ require_one_device() {
 adbsh() { "${ADB[@]}" shell "$@"; }
 
 # ---------------------------------------------------------------------------
+# Install only when the bytes on the device are not already the bytes we built.
+#
+# MEASURING.md §"Reproduction checklist" item 2 says no `adb install` between
+# rounds, and both capture scripts installed before *every* run -- so the rule
+# has never actually held for a single published row. It is not a formality:
+# an install resets the app's ART profile, so the launches right after it run
+# without the AOT-compiled code the app has in steady state. That is the exact
+# mechanism that once put a WebView first frame of 522 ms into a published table
+# when the steady-state figure was 354 ms.
+#
+# Within one matrix run the same APK is reinstalled once per cell -- nine times
+# per runtime for a three-round, three-game matrix -- and every one of those
+# resets the profile again.
+#
+# Compares by content hash rather than by version code: the version code does
+# not move between two builds of the same source, which is exactly the case
+# where reinstalling is pure damage.
+# ---------------------------------------------------------------------------
+install_if_changed() {  # <package> <apk>
+  local pkg="$1" apk="$2" want have remote
+  want="$(sha256sum "$apk" | cut -d' ' -f1)"
+  remote="$("${ADB[@]}" shell "pm path $pkg 2>/dev/null" | head -1 | tr -d '\r' | sed 's/^package://')"
+  if [ -n "$remote" ]; then
+    have="$("${ADB[@]}" shell "sha256sum '$remote' 2>/dev/null" | awk '{print $1}' | tr -d '\r')"
+    if [ -n "$have" ] && [ "$want" = "$have" ]; then
+      echo "[install] $pkg unchanged; not reinstalling (ART profile kept)" >&2
+      return 0
+    fi
+  fi
+  echo "[install] $pkg changed or absent; installing -- the next launches run without an AOT profile" >&2
+  "${ADB[@]}" install -r -d "$apk" >/dev/null
+}
+
+
+# ---------------------------------------------------------------------------
 # The cold gate.
 #
 # MEASURING.md §4: every measurement waits for the same device state first, and

@@ -16,7 +16,7 @@ PKG=com.migo.bench.webview; ACT=.WebViewBenchActivity
 SHELL_DIR="$DIR/../shells/webview-shell"; pfx="$OUT/$LABEL"
 
 ( cd "$SHELL_DIR" && ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}" ./gradlew -q :app:assembleDebug )
-"${ADB[@]}" install -r -d "$SHELL_DIR/app/build/outputs/apk/debug/app-debug.apk" >/dev/null
+install_if_changed "$PKG" "$SHELL_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
 if [ "$SCEN" = stress ]; then
   capture_stress "$PKG" "$ACT" "$DUR" "${pfx}_stress.txt"

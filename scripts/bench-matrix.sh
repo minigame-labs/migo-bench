@@ -21,6 +21,14 @@
 #     than assumed.
 #   * A failed cell is recorded as failed. It is not silently retried, because a
 #     retry is a different sample and the table would not say so.
+#   * Both shells are installed once, up front, and then left alone. That is
+#     checklist item 2, and until now nothing enforced it: the capture scripts
+#     reinstalled before every run, which resets the app's ART profile, so the
+#     launches straight after ran without the AOT-compiled code the app has in
+#     steady state. It is the mechanism that once put a 522 ms WebView first
+#     frame into a published table when the steady-state figure was 354 ms.
+#     After the install each shell is launched once and discarded, so the first
+#     *measured* launch is not the first launch since the profile was reset.
 #
 # It writes out/matrix.csv: every results.csv column, prefixed with the round and
 # suffixed with what the gate did. Rows are raw, one per run — take medians per
@@ -67,6 +75,26 @@ fi
 
 echo "[matrix] device=$SERIAL rounds=$ROUNDS games='$GAMES'"
 echo "[matrix] migo=$MIGO_AAR duration=${DUR}s cold-runs=$COLD"
+
+# ---- install once, settle, then never install again --------------------
+# One throwaway run per runtime does the installing (lib.sh's
+# install_if_changed makes every later run a no-op, since the APK does not
+# change) and gives ART a launch to profile before anything is recorded. Its
+# row is dropped: it is the one run that carries the fresh-install penalty.
+echo "[matrix] priming: installing both shells and discarding one run each"
+for runtime in webview migo; do
+  prime=(--runtime "$runtime" --game "${GAMES%% *}" --device "$SERIAL" --duration 10 --cold-runs 1)
+  [[ "$runtime" == migo ]] && prime+=(--migo-aar "$MIGO_AAR")
+  before="$(wc -l < "$OUT/results.csv")"
+  if bash "$DIR/run.sh" "${prime[@]}" >"$OUT/matrix_prime_${runtime}.log" 2>&1; then
+    after="$(wc -l < "$OUT/results.csv")"
+    (( after > before )) && sed -i '$d' "$OUT/results.csv"
+    echo "[matrix]   $runtime primed (row discarded)"
+  else
+    echo "[matrix]   $runtime prime FAILED -- see $OUT/matrix_prime_${runtime}.log" >&2
+    exit 1
+  fi
+done
 
 failures=0
 for (( round=1; round<=ROUNDS; round++ )); do
