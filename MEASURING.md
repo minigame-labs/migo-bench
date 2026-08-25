@@ -98,6 +98,16 @@ Re-run the self-test when the device, the OS, or the harness changes. It is
 twenty minutes and it is the difference between publishing a measurement and
 publishing a number.
 
+**And note what it does not cover.** The self-test runs both arms in one
+session, so it measures within-session noise only. Across sessions the level
+moves further: on 2026-08-25 the same cell read 609 ms in one session, 726 ms in
+another, and 636/686 ms in a third — a ~120 ms band that no within-session
+number predicts. Hours were spent chasing that 117 ms as a regression before the
+third session showed both builds landing between the two earlier figures.
+
+That is §3 restated with a number: **a cross-session comparison is not a
+comparison**, and a noise floor measured within a session does not license one.
+
 ## 5. A nonexistent game asset fails silently, in both directions.
 
 `bunnymark` **is** the default asset directory `game`. There is no
