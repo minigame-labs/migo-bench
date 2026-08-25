@@ -61,6 +61,43 @@ RESULTS.md is gated to ≤34 °C.
 The gate must have a **timeout that reports itself**. A silent "waited forever
 then proceeded" turns a gated run into an ungated one that still looks gated.
 
+## 4b. Know what this harness can resolve, before quoting a difference.
+
+Everything above is about not fooling yourself with a *wrong* number. This one is
+about not fooling yourself with a *real* number that means nothing.
+
+Run the same build against itself — `scripts/jitless-ab.sh --self-test` — and
+whatever appears between the two "arms" is noise. Measured 2026-08-25,
+endless-runner, three interleaved temperature-gated rounds per arm, Mate 30 Pro:
+
+| metric | arm A | arm B | apparent difference | spread over all six |
+|---|---|---|---|---|
+| first frame | 311 ms | 325 ms | **14 ms (4.5%)** | 47 ms (15%) |
+| game ready | 655 ms | 675 ms | **20 ms (3%)** | 104 ms (16%) |
+| CPU | 42% | 42% | 0 | 1 (2%) |
+| PSS | 199 MB | 198 MB | 1 MB | 2 MB (1%) |
+
+**One build differs from itself by 14 ms of first frame and 20 ms of game-ready.**
+
+Three things follow, and they are not optional readings of this table:
+
+1. **A startup difference under ~50 ms is not a difference at n=3.** Quote it and
+   you are quoting the harness, not the runtime. RESULTS.md's "endless-runner
+   game-ready 6% faster" was ~38 ms — below this floor. It was downgraded to
+   "slightly faster" on instinct; this is the number behind that instinct.
+2. **Memory and CPU are a different instrument.** 1–2% spread means a 2× CPU
+   ratio or a 50% memory difference is far above anything this noise can produce.
+   Those claims are load-bearing; the startup ones are the fragile ones.
+3. **A tight, non-overlapping result can still be noise.** On 2026-08-25 a
+   packed-relocations A/B produced 330 [320, 330, 331] against 314 [313, 314,
+   317] — tight, non-overlapping, mechanism ready to explain it. The clean
+   re-run flipped the sign, and this self-test shows the harness manufactures a
+   14 ms gap from nothing. **Ranges that do not overlap are not evidence at n=3.**
+
+Re-run the self-test when the device, the OS, or the harness changes. It is
+twenty minutes and it is the difference between publishing a measurement and
+publishing a number.
+
 ## 5. A nonexistent game asset fails silently, in both directions.
 
 `bunnymark` **is** the default asset directory `game`. There is no

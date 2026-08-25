@@ -43,6 +43,20 @@
 #                 [--games "bunnymark canvasmark endless-runner"]
 #                 [--rounds 3] [--duration 60] [--cold-runs 3]
 #                 [--scenario steady|stress]
+#                 [--label-a NAME] [--label-b NAME] [--self-test]
+#
+# --self-test runs one build against itself. Everything that then appears
+# between the two "arms" is noise, which is the only way to know what a
+# difference has to be before this harness can call it a difference at all.
+# Without that number every published comparison is unanchored: 15 ms and 150 ms
+# read the same on the page. It is the one case where the identical-AAR guard
+# below is wrong, so it takes an explicit flag rather than being inferred.
+#
+# The two arms are labelled `jit` and `jitless` by default because that is what
+# this was built for, but the driver is arm-agnostic: any two AARs from one tree
+# differing in one thing. Rename them when they are something else -- a row
+# labelled `jitless` that is really "packed relocations off" is the kind of
+# mislabelled data that outlives whoever produced it.
 #
 # --scenario stress runs bunnymark's sprite ramp instead of the steady window.
 # It exists because the steady table cannot answer the question the whole
@@ -62,6 +76,7 @@ OUT="$DIR/../out"; mkdir -p "$OUT"
 SERIAL=""; JIT_AAR=""; JITLESS_AAR=""
 GAMES="bunnymark canvasmark endless-runner"
 ROUNDS=3; DUR=60; COLD=3; SCEN=steady
+LABEL_A=jit; LABEL_B=jitless; SELF_TEST=false
 while [[ $# -gt 0 ]]; do case "$1" in
   --device) SERIAL="$2"; shift 2;;
   --jit-aar) JIT_AAR="$2"; shift 2;;
@@ -71,6 +86,9 @@ while [[ $# -gt 0 ]]; do case "$1" in
   --duration) DUR="$2"; shift 2;;
   --cold-runs) COLD="$2"; shift 2;;
   --scenario) SCEN="$2"; shift 2;;
+  --self-test) SELF_TEST=true; LABEL_A=A; LABEL_B=B; shift;;
+  --label-a) LABEL_A="$2"; shift 2;;
+  --label-b) LABEL_B="$2"; shift 2;;
   *) echo "unknown arg: $1" >&2; exit 2;;
 esac; done
 
@@ -87,8 +105,12 @@ done
 # Two paths that resolve to the same bytes would produce a table comparing a
 # build against itself, and every cell would look like noise rather than a bug.
 if cmp -s "$JIT_AAR" "$JITLESS_AAR"; then
-  echo "ERROR: --jit-aar and --jitless-aar are byte-identical; one of them is not the build you think it is" >&2
-  exit 2
+  if [[ "$SELF_TEST" != true ]]; then
+    echo "ERROR: --jit-aar and --jitless-aar are byte-identical; one of them is not the build you think it is" >&2
+    echo "       (pass --self-test if measuring the harness's own noise floor is the point)" >&2
+    exit 2
+  fi
+  echo "[ab] SELF TEST: both arms are the same build. Any difference below is noise."
 fi
 
 ADB_BIN="${ANDROID_HOME:+$ANDROID_HOME/platform-tools/adb}"
@@ -118,14 +140,11 @@ echo "[ab] jitless = $JITLESS_AAR"
 for (( round=1; round<=ROUNDS; round++ )); do
   # Alternate which arm goes first. Whatever drifts across a round then lands on
   # the other arm next time instead of always on the same one.
-  if (( round % 2 == 1 )); then arms=(jit jitless); else arms=(jitless jit); fi
+  if (( round % 2 == 1 )); then arms=("$LABEL_A" "$LABEL_B"); else arms=("$LABEL_B" "$LABEL_A"); fi
 
   for game in $GAMES; do
     for arm in "${arms[@]}"; do
-      case "$arm" in
-        jit)     aar="$JIT_AAR";;
-        jitless) aar="$JITLESS_AAR";;
-      esac
+      if [[ "$arm" == "$LABEL_A" ]]; then aar="$JIT_AAR"; else aar="$JITLESS_AAR"; fi
 
       echo "[ab] round $round | $game | $arm"
       gate="$(cold_gate "r${round}/${game}/${arm}")"
