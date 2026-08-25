@@ -1,7 +1,7 @@
 # 无 JIT 的 V8 要付多少代价
 
 > 原始数据:`out/jitless_ab.csv`(每行带完整溯源:设备、Migo 版本、时间戳、`fps_source`、温控门的结论)。
-> 装置:`scripts/jitless-ab.sh`。
+> 装置:`scripts/ab-run.sh`。
 > 测于 **2026-08-24**,华为 Mate30 Pro(麒麟 990 / 8G / Android 12),三轮交错、逐格温控。
 
 ## 为什么要量这个
@@ -116,13 +116,13 @@ bash scripts/build-aar.sh                 arm64-v8a release   # JIT 臂
 bash scripts/build-aar.sh --jitless       arm64-v8a release   # jitless 臂
 
 cd ../migo-bench
-bash scripts/jitless-ab.sh --device <SERIAL> \
+bash scripts/ab-run.sh --device <SERIAL> \
   --jit-aar     ../migo/platforms/android/dist/migo-full-release-arm64-v8a.aar \
   --jitless-aar ../migo/platforms/android/dist/migo-full-release-jitless-arm64-v8a.aar \
   --rounds 3
 
 # 爬坡曲线(bunnymark 专属:ramp 是 Pixi ticker 驱动的)
-bash scripts/jitless-ab.sh --device <SERIAL> \
+bash scripts/ab-run.sh --device <SERIAL> \
   --jit-aar ... --jitless-aar ... --scenario stress --rounds 2
 ```
 

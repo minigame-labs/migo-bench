@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
-# What a jitless V8 costs, measured on hardware instead of assumed.
+# Two builds, one session, one variable.
+#
+# This is the only way this repository can compare versions at all. The
+# steady-state table (bench-matrix.sh) compares Migo against WebView within one
+# session, which is valid; comparing *its* output against a previously published
+# table is not, because the level drifts ~120 ms between sessions (MEASURING.md
+# §3 and §4b). Chasing a 117 ms "regression" that was nothing but that drift is
+# what produced this note.
+#
+# So: to ask whether a change moved anything, put both builds in one session and
+# alternate them. That is what this driver does, and it does not care what the
+# two builds differ by -- name the arms with --label-a / --label-b.
+#
+# It was written for one question and still carries that question's flags
+# (--jit-aar / --jitless-aar) so existing invocations keep working. Read them as
+# "arm A" and "arm B".
+#
+# ---------------------------------------------------------------------------
+# Its first use: what a jitless V8 costs, measured on hardware instead of assumed.
 #
 # HarmonyOS 5.0.0(12) stopped letting anonymous memory become executable, so no
 # third-party VM may JIT on NEXT. Migo bundles V8, so on NEXT it runs
@@ -39,7 +57,7 @@
 #     as clean.
 #
 # Usage:
-#   jitless-ab.sh --device SERIAL --jit-aar PATH --jitless-aar PATH
+#   ab-run.sh --device SERIAL --jit-aar PATH --jitless-aar PATH
 #                 [--games "bunnymark canvasmark endless-runner"]
 #                 [--rounds 3] [--duration 60] [--cold-runs 3]
 #                 [--scenario steady|stress]

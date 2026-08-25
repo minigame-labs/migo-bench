@@ -66,7 +66,7 @@ then proceeded" turns a gated run into an ungated one that still looks gated.
 Everything above is about not fooling yourself with a *wrong* number. This one is
 about not fooling yourself with a *real* number that means nothing.
 
-Run the same build against itself — `scripts/jitless-ab.sh --self-test` — and
+Run the same build against itself — `scripts/ab-run.sh --self-test` — and
 whatever appears between the two "arms" is noise. Measured 2026-08-25,
 endless-runner, three interleaved temperature-gated rounds per arm, Mate 30 Pro:
 
@@ -107,6 +107,25 @@ third session showed both builds landing between the two earlier figures.
 
 That is §3 restated with a number: **a cross-session comparison is not a
 comparison**, and a noise floor measured within a session does not license one.
+
+### So how do you compare two versions?
+
+Put both in the same session and alternate them:
+
+```sh
+scripts/ab-run.sh --device <SERIAL> \
+  --jit-aar <build A>.aar --jitless-aar <build B>.aar \
+  --label-a v0.9.4 --label-b v0.9.5 \
+  --games endless-runner --rounds 3
+```
+
+(The flag names are the ones the driver was born with; read them as arm A and
+arm B.) This is the only version comparison this repository can make. A table in
+`RESULTS.md` is a within-session comparison of Migo against WebView — it is not
+a baseline for the next version, and using it as one is what §3 forbids.
+
+Before quoting any difference the run produces, check it against §4b's floor,
+and remember the floor is per-session too.
 
 ## 5. A nonexistent game asset fails silently, in both directions.
 
