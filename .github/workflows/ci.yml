@@ -30,6 +30,15 @@ jobs:
       - name: Unit tests (parse + compare)
         run: python -m pytest tests/ -q
 
+      # The published figures must still be the ones out/results.csv gives. They
+      # were not: on 2026-08-25 RESULTS.md quoted one session in its summary and
+      # an older one in its own tables, and RESULTS.en.md was stale enough to
+      # still call endless-runner game-ready a "thin lead" when that session has
+      # it 10% behind. A hand-typed number in prose carries no provenance, so
+      # this regenerates them and fails on any drift.
+      - name: Published figures are derived from the raw rows
+        run: bash scripts/test-results-figures-derived.sh
+
       - name: Showcase table renders (Migo vs WebView, fixture)
         run: python3 scripts/compare.py --results tests/fixtures/compare_results.csv --game bunnymark --vs-webview
 
