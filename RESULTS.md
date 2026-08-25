@@ -27,9 +27,15 @@
 
 - ✅ **内存:Migo 少 49–62%**(bunnymark 108 vs 236、endless-runner 201 vs 390、canvasmark 86 vs 225 MB)。公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。
 - ✅ **CPU:Migo 用 WebView 的 1/3 到 1/2(2.5–2.9×)**——bunnymark 2.8×、endless-runner 2.9×、canvasmark 2.5×。
+- ⚖️ **先说这一组数字能不能读:本装置的噪声本底已经量过了**(MEASURING.md §4b)。
+  同一个构建对自己跑,首帧凭空差 **14 ms**、可玩差 **20 ms**,六次极差 15–16%。
+  **所以启动类差异低于 ~50 ms 在 n=3 下不算差异**;而内存与 CPU 的极差只有 1–2%,
+  那两组结论远在噪声之上。下面每一条都按这把尺子读。
 - ✅ **启动:六项里五项更快。** 首帧三款全胜(快 7% / 36% / 53%),可玩两胜一负
   (bunnymark 快 23%、canvasmark 快 34%、**endless-runner 慢 10%**)。
   上一版写的是"六项全部更快",现在不成立。
+  按 §4b 的本底看:bunnymark 首帧 124 ms、canvasmark 首帧 249 ms、canvasmark 可玩 169 ms
+  都远超本底;**endless-runner 首帧只快 25 ms,在本底之内,不该当作领先读**。
 - = **帧率:打平。** 两侧中位数都是 60 fps;1% 低帧 Migo 59、WebView 60。
 - = **重载扩展性:打平。** 压到 220,000 精灵,拐点两边都在 40,000,曲线逐档持平或 Migo 高 1 fps。
 - 🔴 **`endless-runner` 的可玩耗时:上一版说"略快",本版是慢 10%。** Migo 三轮
