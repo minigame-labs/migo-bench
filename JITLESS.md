@@ -126,6 +126,8 @@ bash scripts/ab-run.sh --device <SERIAL> \
   --jit-aar ... --jitless-aar ... --scenario stress --rounds 2
 ```
 
+原始行在 `out/jitless_ab.csv`（`arm` 列区分两条臂）——这张表就是从那里来的。
+
 装置会拒绝两个字节相同的 AAR——那种情况下每一格都会看起来像噪声,而不是像 bug。
 stress 模式下每一格的曲线各自存档(`stress_migo_<arm>_r<round>.csv`),因为 `run.sh`
 每次都覆写同一个 `stress_migo.csv`,不改名的话只会剩最后一条臂。

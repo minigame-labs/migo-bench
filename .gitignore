@@ -5,6 +5,10 @@ out/*
 # how the last provenance chain broke: the page said "re-measured 2026-08-23"
 # while the newest committed row was 08-15.
 !out/matrix.csv
+# Same reason, for the A/B driver's rows. JITLESS.md and CODEGEN.md both publish
+# tables whose only raw source is this file; it was ignored while they were
+# written, so both pages shipped pointing at data that was not here.
+!out/jitless_ab.csv
 **/build/
 **/.gradle/
 *.apk

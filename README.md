@@ -34,6 +34,12 @@ steady-state games all tie at a vsync-capped 60 fps, the stress ramp shows the c
 everything — the 60 fps knee moves from **40,000 sprites to 2,000**, and at equal load jitless
 returns 2.4× to 16× fewer frames.
 
+**[CODEGEN.md](CODEGEN.md)** — whether raising the codegen level on the five hot crates buys
+anything. It does not: twelve cells, not one moved above §4b's noise floor, for +1.29 MiB of
+`.so` — enough to put `.text` 44 KB over its own size budget. Two cells did cross the floor, in
+opposite directions, and both dissolve into a single round when you look at the paired deltas;
+that is the clearest demonstration this repo has of why n=3 ranges are not evidence.
+
 **[MEASURING.md](MEASURING.md)** — how to take a number here without fooling yourself.
 Thirteen traps, each one of which has already cost this repo a wrong published number or a
 wasted day. Read it before you re-measure anything.
