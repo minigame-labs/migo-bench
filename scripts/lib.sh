@@ -253,4 +253,14 @@ capture_stress() {
   "${ADB[@]}" shell am start -n "$pkg/$act" $_extra --es game_asset game-stress >/dev/null 2>&1
   sleep "$dur"
   "${ADB[@]}" logcat -d 2>/dev/null | grep -oE 'bunnies=[0-9]+ fps=[0-9]+' > "$outf" || true
+  # The ramp ends at its heaviest step (20k bunnies) and nothing here was ever
+  # telling the app to stop -- it stayed in the foreground, still rendering that
+  # heaviest step, all the way through cold_gate's subsequent wait for the next
+  # cell (up to 420s). cold_gate polls thermal state but never touches the app
+  # under test, so a caller relying on it to gate the *next* cell's start was
+  # gating against a device that could not cool: the thing generating the heat
+  # was still running. Found by watching a real cooldown wait time out at 425s
+  # while the SoC was still at 61.8C, having started the wait at the same
+  # temperature the ramp reached.
+  "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
 }
