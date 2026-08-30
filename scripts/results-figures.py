@@ -148,13 +148,18 @@ def render(data: dict, lang: str, part: str) -> str:
            for g, *_ in GAMES]
 
     # Startup tally, counted rather than asserted: the English file claimed
-    # "faster on all six" for weeks after that stopped being true.
-    wins, losses = [], []
+    # "faster on all six" for weeks after that stopped being true. A gap that
+    # rounds to 0% is a tie, not a loss -- "slower by 0%" is noise dressed as a
+    # verdict, and (RESULTS.md 8 / CLAUDE.md) publishing the tie is the honest
+    # call anyway.
+    wins, ties, losses = [], [], []
     for g, *_ in GAMES:
         for key, label_cn, label_en in (("first_frame_ms", "首帧", "first frame"),
                                         ("game_ready_ms", "可玩", "game-ready")):
             w, m = _m(games[g], "webview", key), _m(games[g], "migo", key)
-            (wins if m < w else losses).append((g, label_cn, label_en, pct_less(w, m)))
+            d = pct_less(w, m)
+            bucket = ties if abs(d) < 0.5 else (wins if m < w else losses)
+            bucket.append((g, label_cn, label_en, d))
 
     lines: list[str] = []
     if lang == "cn":
@@ -165,10 +170,15 @@ def render(data: dict, lang: str, part: str) -> str:
                      "公平口径:WebView 计入独立的 chromium 渲染进程(否则少算 ~100MB)。")
         per = "、".join(f"{g} {c:.1f}×" for (g, *_), c in zip(GAMES, cpu))
         lines.append(f"- ✅ **CPU:Migo 用 WebView 的 1/3 到 1/2({min(cpu):.1f}–{max(cpu):.1f}×)**——{per}。")
-        lines.append(f"- **启动:六项里 {len(wins)} 项更快。**"
-                     + "更快的是 " + "、".join(f"{g} {lc} 快 {d:.0f}%" for g, lc, _, d in wins) + ";"
-                     + ("更慢的是 " + "、".join(f"**{g} {lc} 慢 {abs(d):.0f}%**" for g, lc, _, d in losses) + "。"
-                        if losses else "没有更慢的一项。"))
+        tally = f"六项里 {len(wins)} 项更快" + (f"、{len(ties)} 项打平" if ties else "")
+        parts = ["更快的是 " + "、".join(f"{g} {lc} 快 {d:.0f}%" for g, lc, _, d in wins)]
+        if ties:
+            parts.append("打平的是 " + "、".join(f"{g} {lc}" for g, lc, _, _ in ties))
+        if losses:
+            parts.append("更慢的是 " + "、".join(f"**{g} {lc} 慢 {abs(d):.0f}%**" for g, lc, _, d in losses))
+        elif not ties:
+            parts.append("没有更慢的一项")
+        lines.append(f"- **启动:{tally}。**" + ";".join(parts) + "。")
         fps = games[GAMES[0][0]]
         lines.append(f"- = **帧率:打平。**两侧中位数都是 {_m(fps,'webview','fps_median'):.0f} fps;"
                      f"1% 低帧 Migo {_m(fps,'migo','fps_1pct_low'):.0f}、WebView {_m(fps,'webview','fps_1pct_low'):.0f}。")
@@ -181,10 +191,13 @@ def render(data: dict, lang: str, part: str) -> str:
                      "(else ~100MB is missed).")
         per = ", ".join(f"{g} {c:.1f}×" for (g, *_), c in zip(GAMES, cpu))
         lines.append(f"- ✅ **CPU: Migo at a third to a half of WebView ({min(cpu):.1f}–{max(cpu):.1f}×)** — {per}.")
-        lines.append(f"- **Startup: faster on {len(wins)} of 6 measurements.** "
-                     + "Faster: " + ", ".join(f"{g} {le} by {d:.0f}%" for g, _, le, d in wins) + "."
-                     + (" Slower: " + ", ".join(f"**{g} {le} by {abs(d):.0f}%**" for g, _, le, d in losses) + "."
-                        if losses else ""))
+        tally = f"faster on {len(wins)} of 6 measurements" + (f", tied on {len(ties)}" if ties else "")
+        segs = ["Faster: " + ", ".join(f"{g} {le} by {d:.0f}%" for g, _, le, d in wins) + "."]
+        if ties:
+            segs.append(" Tied: " + ", ".join(f"{g} {le}" for g, _, le, _ in ties) + ".")
+        if losses:
+            segs.append(" Slower: " + ", ".join(f"**{g} {le} by {abs(d):.0f}%**" for g, _, le, d in losses) + ".")
+        lines.append(f"- **Startup: {tally}.** " + "".join(segs))
         fps = games[GAMES[0][0]]
         lines.append(f"- = **fps: a tie.** Both sides hold a {_m(fps,'webview','fps_median'):.0f} fps median; "
                      f"1% low is Migo {_m(fps,'migo','fps_1pct_low'):.0f}, WebView {_m(fps,'webview','fps_1pct_low'):.0f}.")
@@ -218,12 +231,14 @@ def render(data: dict, lang: str, part: str) -> str:
                 diff = (f"Migo {w/m:.1f}× 少" if lang == "cn" else f"{w/m:.1f}× less")
             else:
                 wt, mt = f"{w:.0f} ms", f"{m:.0f} ms"
-                if m < w:
-                    diff = (f"Migo 快 {pct_less(w,m):.0f}%" if lang == "cn"
-                            else f"{pct_less(w,m):.0f}% faster")
+                d = pct_less(w, m)
+                if abs(d) < 0.5:
+                    diff = "打平" if lang == "cn" else "tie"
+                elif m < w:
+                    diff = (f"Migo 快 {d:.0f}%" if lang == "cn" else f"{d:.0f}% faster")
                 else:
-                    diff = (f"**Migo 慢 {abs(pct_less(w,m)):.0f}%**" if lang == "cn"
-                            else f"**{abs(pct_less(w,m)):.0f}% slower**")
+                    diff = (f"**Migo 慢 {abs(d):.0f}%**" if lang == "cn"
+                            else f"**{abs(d):.0f}% slower**")
             lines.append(f"| {label} | {wt} | {mt} | {diff} |")
         fw, fm = _m(cell, "webview", "fps_median"), _m(cell, "migo", "fps_median")
         lw, lm = _m(cell, "webview", "fps_1pct_low"), _m(cell, "migo", "fps_1pct_low")
