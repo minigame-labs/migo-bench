@@ -60,6 +60,30 @@ failure.
 
 > **Rule.** If the gate refuses, do not measure. Rebuild release.
 
+## 2c. The version field is a return value, so nothing on that path may print.
+
+`run.sh` captures `resolve-migo-aar.sh`'s stdout as `migo_ver` and writes it
+straight into a CSV field. So anything the resolver calls that prints to stdout
+becomes part of the version string -- and a newline in a CSV field silently ends
+the record early.
+
+Until 2026-09-02 the `sha:` spec did exactly that: it ran `build-aar.sh` without
+redirecting, so the entire AAR build log was written into `results.csv` as the
+version, every `sha:`-anchored row became a multi-line record, and
+`bench-matrix.sh` -- which appends `tail -1 results.csv` -- recorded only the
+last fragment of each. The spec the docs recommend for a *publishable* table had
+never once produced a usable row, and the failure was invisible: the run
+reported "recorded" for every cell. That run's 18 cells and 984 lines of leaked
+build output were removed; `out/results.csv.corrupt-bak` holds them.
+
+Two things now stop it recurring: the resolver sends every build's output to
+stderr, and `run.sh` rejects a `migo_ver` that is not a bare version token
+(letters, digits, `. : _ -`). An empty value, a newline, or a comma fails the
+run loudly instead of writing a broken row.
+
+> **Rule.** The resolver's stdout is the version and nothing else. If you add a
+> spec, redirect whatever it runs.
+
 ## 3. Interleave. Device state drifts more than the effect you are chasing.
 
 The same unmodified WebView shell read anywhere from **380 to 524 ms** across one

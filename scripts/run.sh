@@ -37,6 +37,17 @@ fi
 if [[ "$RUNTIME" == migo ]]; then
   [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required for --runtime migo" >&2; exit 2; }
   migo_ver="$(bash "$DIR/resolve-migo-aar.sh" "$MIGO_AAR" "$DIR/../shells/migo-shell/app/libs/migo.aar")"
+  # The resolver's stdout is a version string and nothing else. Anything it
+  # calls that prints to stdout ends up here, and from here it goes straight
+  # into a CSV field -- a newline or a comma silently breaks the row, and the
+  # matrix's `tail -1` then records a fragment. Check the shape rather than
+  # trusting every future callee to stay quiet.
+  case "$migo_ver" in
+    *[!A-Za-z0-9.:_-]* | "" )
+      echo "ERROR: resolve-migo-aar.sh returned something that is not a version:" >&2
+      printf '%s\n' "$migo_ver" | head -3 >&2
+      exit 1 ;;
+  esac
   # Ask the staged artifact what it is before measuring it. See
   # assert-release-aar.sh for the published-a-debug-build incident this exists
   # to stop repeating; the check sits here, after staging, because every spec

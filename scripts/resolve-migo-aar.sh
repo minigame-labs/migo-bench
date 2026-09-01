@@ -35,8 +35,16 @@ case "$spec" in
     # and published to RESULTS.md and the site before anyone noticed; both
     # repositories had to be reverted. MEASURING.md's release rule is the rule,
     # and this is the one place a tool could quietly break it.
+    # The build's own output goes to stderr. This function's stdout IS the
+    # return value -- run.sh captures it as `migo_ver` -- so a single stray
+    # `echo` from anything called here lands in results.csv as the version
+    # field. Until 2026-09-02 the whole AAR build log did exactly that: every
+    # `sha:`-anchored row was written as a multi-line record, and the matrix,
+    # which takes `tail -1 results.csv`, recorded only its last fragment. The
+    # spec the docs recommend for a *publishable* table had therefore never
+    # produced a usable row.
     sha="${spec#sha:}"
-    ( cd "$MIGO_REPO" && git checkout "$sha" -q && bash scripts/build-aar.sh release arm64-v8a )
+    ( cd "$MIGO_REPO" && git checkout "$sha" -q && bash scripts/build-aar.sh release arm64-v8a ) >&2
     # build-aar.sh names output migo-<product-profile>-<build-type>-<abi>.aar
     # (full-release-arm64-v8a.aar here: default profile, requested build type,
     # the one ABI passed above) -- never a bare migo-release.aar.
