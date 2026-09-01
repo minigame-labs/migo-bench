@@ -91,8 +91,35 @@ install_if_changed() {  # <package> <apk>
 # ---------------------------------------------------------------------------
 _gate_read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
 
+# The gate establishes its own precondition before it starts waiting.
+#
+# Three times now a run has sat in this loop for its full 420 s because a shell
+# from the previous step was still resumed and rendering: the device cannot
+# reach 35 C while something is drawing on it, so the gate times out and the row
+# is recorded PROCEEDED-UNGATED -- a hot row that reads like a cold one.
+# 2026-08-28 (capture_stress missing a force-stop), 2026-08-30 (an interrupted
+# run leaving a foreground Activity), and 2026-09-02 (the matrix priming step).
+# Every time the diagnosis was the same and the environment was blameless.
+#
+# So: stop both shells first, then wait. That is not destructive -- the harness
+# force-stops around every measurement anyway -- and it is the half that
+# actually matters: on 2026-09-02 the SoC fell 35675 -> 33023 mC within seconds
+# of the force-stop.
+#
+# The screen is deliberately left ON. `require_one_device` sets `svc power
+# stayon true` because a slept or locked screen stops the game activity and
+# yields zero frames, so blanking here would trade one silent failure for
+# another.
+_gate_quiesce() {
+  local pkg
+  for pkg in com.migo.bench.migo com.migo.bench.webview; do
+    "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  done
+}
+
 cold_gate() {  # <label> -> prints the outcome, never fails the run
   local label="${1:-}" start soc mx waited
+  _gate_quiesce
   start=$(date +%s)
   while true; do
     soc=$(_gate_read_int /sys/class/thermal/thermal_zone0/temp)
