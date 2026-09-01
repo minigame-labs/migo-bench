@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime, timedelta
 import json
 import pathlib
 import statistics
@@ -40,6 +41,53 @@ METRICS = [
     ("fps_median", "fps_median", 1.0, 1),
     ("fps_1pct_low", "fps_1pct_low", 1.0, 1),
 ]
+
+
+# One run, not every run the file has accumulated.
+#
+# `bench-matrix.sh` appends to out/matrix.csv and only writes a header when the
+# file is absent, so the ledger holds every session ever taken on this machine.
+# Summarising all of it blends measurements days apart -- exactly what
+# MEASURING.md section 3 forbids, because the level drifts ~120 ms between
+# sessions, which is larger than most effects being published. Before
+# 2026-09-02 this function did not exist and the published table was whatever
+# happened to be in the file.
+#
+# A session is a contiguous block in time: inside one run the cells are minutes
+# apart, and runs are hours or days apart. So walk back from the newest row and
+# stop at the first gap larger than SESSION_GAP. The boundary is printed, so a
+# reader can check the split rather than trust it.
+SESSION_GAP = timedelta(minutes=45)
+
+
+def _parsed_time(row: dict[str, str]) -> datetime | None:
+    raw = (row.get("timestamp") or "").strip()
+    try:
+        return datetime.strptime(raw, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return None
+
+
+def latest_session(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    stamped = [(t, r) for r in rows if (t := _parsed_time(r)) is not None]
+    if not stamped:
+        # No usable timestamps: summarising the whole file is still wrong, but
+        # refusing outright would break a ledger written by an older harness.
+        print("matrix-summary: no parseable timestamps; using every row",
+              file=sys.stderr)
+        return rows
+    stamped.sort(key=lambda pair: pair[0])
+    cut = 0
+    for i in range(len(stamped) - 1, 0, -1):
+        if stamped[i][0] - stamped[i - 1][0] > SESSION_GAP:
+            cut = i
+            break
+    session = [r for _, r in stamped[cut:]]
+    if cut:
+        print(f"matrix-summary: using the {len(session)} row(s) from "
+              f"{stamped[cut][0]:%Y-%m-%dT%H:%M:%SZ} onward; "
+              f"{cut} older row(s) belong to earlier sessions", file=sys.stderr)
+    return session
 
 
 def main() -> int:
@@ -59,6 +107,8 @@ def main() -> int:
     if not rows:
         print(f"{path} has no rows", file=sys.stderr)
         return 2
+
+    rows = latest_session(rows)
 
     # A row whose gate timed out was not taken under the same device state as
     # the others. Counting it would silently mix two conditions, so it is
