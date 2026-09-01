@@ -37,6 +37,11 @@ fi
 if [[ "$RUNTIME" == migo ]]; then
   [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required for --runtime migo" >&2; exit 2; }
   migo_ver="$(bash "$DIR/resolve-migo-aar.sh" "$MIGO_AAR" "$DIR/../shells/migo-shell/app/libs/migo.aar")"
+  # Ask the staged artifact what it is before measuring it. See
+  # assert-release-aar.sh for the published-a-debug-build incident this exists
+  # to stop repeating; the check sits here, after staging, because every spec
+  # (local / release-tag / sha) funnels through this one file.
+  bash "$DIR/assert-release-aar.sh" "$DIR/../shells/migo-shell/app/libs/migo.aar" || exit 1
   bash "$DIR/capture-migo.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"
 elif [[ "$RUNTIME" == webview ]]; then
   bash "$DIR/capture-webview.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"

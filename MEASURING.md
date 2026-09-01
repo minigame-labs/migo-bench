@@ -41,6 +41,25 @@ A/B-ing two builds by swapping APKs, the swap is inside your measurement window.
 Either accept it symmetrically (both variants pay it every round) and say so, or
 install once per variant and batch the runs.
 
+## 2b. The build under test must be a release build, and the tool now checks.
+
+A debug AAR is a different product: opt-level 0, no LTO, no R8. Every number
+taken from one describes something this project does not ship.
+
+This was already a written rule and it still failed. On 2026-08-29 an AAR built
+`debug` for an unrelated check was run through the public matrix and published
+to RESULTS.md and the project site; both repositories had to be reverted. The
+rule was not enough because nothing asked the artifact.
+
+`scripts/assert-release-aar.sh` now does, and `run.sh` calls it after staging,
+so every spec (`local:` / `release-tag:` / `sha:`) passes through it. It reads
+`build_type` out of the AAR's own `assets/migo/artifacts/slices/*.json` rather
+than trusting a file name or a flag someone believes they passed. A debug AAR
+carries no artifact manifest at all, which is exactly why the absence is also a
+failure.
+
+> **Rule.** If the gate refuses, do not measure. Rebuild release.
+
 ## 3. Interleave. Device state drifts more than the effect you are chasing.
 
 The same unmodified WebView shell read anywhere from **380 to 524 ms** across one

@@ -28,12 +28,19 @@ case "$spec" in
     echo "$tag"
     ;;
   sha:*)
+    # RELEASE, not debug. This spec exists to anchor a *publishable* table, and
+    # a debug AAR is a different product: opt-level 0, no LTO, no R8. It built
+    # debug until 2026-09-02, and that is not a hypothetical -- on 2026-08-29 a
+    # debug AAR built for an unrelated check was run through the public matrix
+    # and published to RESULTS.md and the site before anyone noticed; both
+    # repositories had to be reverted. MEASURING.md's release rule is the rule,
+    # and this is the one place a tool could quietly break it.
     sha="${spec#sha:}"
-    ( cd "$MIGO_REPO" && git checkout "$sha" -q && bash scripts/build-aar.sh debug arm64-v8a )
-    # build-aar.sh names debug output migo-<product-profile>-<build-type>-<abi>.aar
-    # (full-debug-arm64-v8a.aar here: default profile, requested build type, the
-    # one ABI passed above) -- never the bare migo-debug.aar this used to assume.
-    cp "$MIGO_REPO/platforms/android/dist/migo-full-debug-arm64-v8a.aar" "$dest"
+    ( cd "$MIGO_REPO" && git checkout "$sha" -q && bash scripts/build-aar.sh release arm64-v8a )
+    # build-aar.sh names output migo-<product-profile>-<build-type>-<abi>.aar
+    # (full-release-arm64-v8a.aar here: default profile, requested build type,
+    # the one ABI passed above) -- never a bare migo-release.aar.
+    cp "$MIGO_REPO/platforms/android/dist/migo-full-release-arm64-v8a.aar" "$dest"
     echo "$sha"
     ;;
   *)
