@@ -8,6 +8,27 @@ The per-run definitions (what "first frame" means, how memory is summed) live in
 [RESULTS.md §5.3](RESULTS.md). This page is about the ways a correct-looking
 measurement is not measuring what you think.
 
+## The shape all of these share
+
+On 2026-09-02, five separate faults were found in this harness in one night. Not
+one of them made anything fail. Every one of them **reported success while
+producing a number that was wrong or absent**:
+
+| fault | what it looked like |
+|---|---|
+| `sha:` wrote the AAR build log into the version field | every cell logged "recorded"; each row was a fragment |
+| the cold gate waited on a temperature a foreground app prevented | rows recorded `PROCEEDED-UNGATED` — hot rows reading as cold |
+| the summary had no session scoping | medians silently blended runs days apart |
+| a fixture printed a literal `fps=60` | a flat 60 for a workload running at 22 |
+| `sha:` built `debug`, and nothing checked | the numbers were of a product this repo does not ship |
+
+**So the rule that generates the rules below: a measurement tool must fail
+loudly, not quietly produce something.** Where a check can ask the artifact
+itself — its `build_type`, its own timestamps, its declared version — it should,
+rather than trusting a file name, a flag, or the operator's memory. Each of those
+five now has a gate or a guard, and each gate was proven to turn red before it
+was trusted.
+
 ---
 
 ## 1. Both sides must already be warm. A just-installed APK is not steady state.
