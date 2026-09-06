@@ -81,3 +81,4 @@ endless-runner_webview,webview,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.
 endless-runner_migo,migo,endless-runner,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),b2b62e4dafd41a46cae8a003825f34e7484dc3f9,1.0.0,2026-09-01T23:33:15Z,game-telemetry,307,712,40,219435,60,59
 canvasmark_webview,webview,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),n/a,1.0.0,2026-09-01T23:35:32Z,game-telemetry,352,377,164,198938,60,60
 canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),b2b62e4dafd41a46cae8a003825f34e7484dc3f9,1.0.0,2026-09-01T23:38:14Z,game-telemetry,227,328,76,103799,60,59
+canvasmark_migo,migo,canvasmark,TAS-AN00,HUAWEI,12,31,(com.huawei.webview; 114.0.5.302),local:6c823c6f,1.0.0,2026-09-04T17:08:06Z,game-telemetry,233,316,73,98882,60,59
