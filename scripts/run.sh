@@ -2,9 +2,10 @@
 # Top-level runner: capture one runtime for one game on a device, append a
 # provenance-stamped row to out/results.csv.
 #
-#   run.sh --runtime webview|migo --game bunnymark --device SERIAL \
+#   run.sh --runtime webview|migo|capi --game bunnymark --device SERIAL \
 #          [--scenario steady] [--duration 60] [--cold-runs 3] \
 #          [--migo-aar local:PATH|release-tag:TAG|sha:SHA]   (required for migo)
+#   capi reads its APK from CAPI_APK and its version from CAPI_VERSION.
 set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -34,6 +35,9 @@ if [[ "$SCEN" == stress ]]; then
   bash "$DIR/make-stress-game.sh"
 fi
 
+if [[ "$SCEN" == stress ]] && [[ "$RUNTIME" == capi ]]; then
+  echo "ERROR: --runtime capi measures steady state only" >&2; exit 2
+fi
 if [[ "$RUNTIME" == migo ]]; then
   [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required for --runtime migo" >&2; exit 2; }
   migo_ver="$(bash "$DIR/resolve-migo-aar.sh" "$MIGO_AAR" "$DIR/../shells/migo-shell/app/libs/migo.aar")"
@@ -54,10 +58,15 @@ if [[ "$RUNTIME" == migo ]]; then
   # (local / release-tag / sha) funnels through this one file.
   bash "$DIR/assert-release-aar.sh" "$DIR/../shells/migo-shell/app/libs/migo.aar" || exit 1
   bash "$DIR/capture-migo.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"
+elif [[ "$RUNTIME" == capi ]]; then
+  # The engine's version is the package the APK was linked against; the driver
+  # that built it passes it down, because the APK does not say.
+  migo_ver="${CAPI_VERSION:-unknown}"
+  bash "$DIR/capture-capi.sh" --label "$LABEL" --out "$OUT" --duration "$DUR"
 elif [[ "$RUNTIME" == webview ]]; then
   bash "$DIR/capture-webview.sh" --label "$LABEL" --out "$OUT" --duration "$DUR" --cold-runs "$COLD" --scenario "$SCEN"
 else
-  echo "ERROR: unknown runtime $RUNTIME (want webview|migo)" >&2; exit 2
+  echo "ERROR: unknown runtime $RUNTIME (want webview|migo|capi)" >&2; exit 2
 fi
 
 if [[ "$SCEN" == stress ]]; then
