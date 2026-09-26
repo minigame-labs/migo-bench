@@ -549,6 +549,11 @@
 
   // src/document.js
   var _docTarget = new EventTarget();
+  var head = new HTMLElement("head");
+  var body = new HTMLElement("body");
+  var documentElement = new HTMLElement("html");
+  documentElement.appendChild(head);
+  documentElement.appendChild(body);
   var document = {
     // Starts "loading"; index.js walks it "loading" → "interactive" (fires
     // DOMContentLoaded) → "complete" (fires window `load`) on a deferred
@@ -558,16 +563,15 @@
     onreadystatechange: null,
     visibilityState: "visible",
     hidden: false,
-    documentElement: null,
-    // patched at the end (circular: window → document)
+    documentElement,
     location: location_default,
     ontouchstart: null,
     ontouchmove: null,
     ontouchend: null,
     ontouchcancel: null,
     style: {},
-    head: new HTMLElement("head"),
-    body: new HTMLElement("body"),
+    head,
+    body,
     // Set true by index.js when the `load` event fires; gates display-canvas
     // routing below so it only applies to canvases created during engine boot.
     _loadFired: false,
@@ -717,7 +721,7 @@
       } catch {
       }
     }
-    send(body) {
+    send(body2) {
       if (typeof migo.request !== "function") {
         throw new Error("[migo-web-adapter] migo.request is not available");
       }
@@ -727,7 +731,7 @@
         url: this._url,
         method: this._method,
         header: this._headers,
-        data: body,
+        data: body2,
         dataType,
         responseType,
         success: (res) => {
@@ -1006,6 +1010,9 @@
     const _emit = (ev) => {
       ev.target = canvas;
       canvas.dispatchEvent && canvas.dispatchEvent(ev);
+      for (let node = canvas.parentNode || document_default.body; node; node = node.parentNode) {
+        node.dispatchEvent(ev);
+      }
       document_default.dispatchEvent(ev);
       _winTarget.dispatchEvent(ev);
       const sink = document_default["on" + ev.type];
@@ -1145,7 +1152,6 @@
       } catch {
       }
     });
-    document_default.documentElement = globalThis;
     const surface = {
       // BOM scalars (data values, snapshotted; bom.js refreshes on resize)
       innerWidth,
