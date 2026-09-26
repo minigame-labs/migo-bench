@@ -1,3 +1,4 @@
+import CryptoKit
 import MigoApplePerformancePlus
 import UIKit
 
@@ -25,17 +26,30 @@ final class MigoBenchViewController: BenchViewController {
             guard let package = Bundle.main.url(forResource: Bench.asset, withExtension: nil) else {
                 throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: Bench.asset])
             }
-            // Bundled, so unsigned; the build number as the version skips the
-            // copy on every launch after the first.
+            // Bundled, so unsigned. The version is the package's own digest: an
+            // app rebuilt around different game bytes keeps its build number,
+            // and the installer skips a version it already has -- the bench
+            // would run the previous game.
             let configuration = try MigoGameView.Configuration.standard(contentSigning: .unsigned)
-            let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
             try MigoGameInstaller.install(
-                package: package, id: Bench.asset, version: version, into: configuration.directories)
+                package: package, id: Bench.asset, version: try digest(of: package),
+                into: configuration.directories)
             view = MigoGameView(configuration: configuration)
         } catch {
             Bench.report("failed: \(error)")
             exit(1)
         }
+    }
+
+    private func digest(of package: URL) throws -> String {
+        var hash = SHA256()
+        let files = try FileManager.default.contentsOfDirectory(
+            at: package, includingPropertiesForKeys: nil)
+        for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            hash.update(data: Data(file.lastPathComponent.utf8))
+            hash.update(data: try Data(contentsOf: file))
+        }
+        return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     override func viewDidLoad() {
