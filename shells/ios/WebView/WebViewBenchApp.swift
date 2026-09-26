@@ -20,18 +20,22 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 final class WebViewBenchViewController: BenchViewController, WKScriptMessageHandler {
-    /// Forwards every `console` line to the app, as the Migo arm's engine does,
-    /// so the fps telemetry reaches the harness by the same route on both arms.
+    /// Forwards every `console` line, and every uncaught error, to the app --
+    /// as the Migo arm's engine does -- so the fps telemetry and a failing
+    /// script reach the harness by the same route on both arms.
     private static let consoleBridge = """
         (() => {
+          const post = (level, text) => window.webkit.messageHandlers.bench.postMessage([level, text]);
           const levels = { log: 1, info: 1, warn: 2, error: 3 };
           for (const name of Object.keys(levels)) {
             const original = console[name];
             console[name] = function (...args) {
-              window.webkit.messageHandlers.bench.postMessage([levels[name], args.map(String).join(' ')]);
+              post(levels[name], args.map(String).join(' '));
               return original.apply(console, args);
             };
           }
+          addEventListener('error', (e) => post(3, `Uncaught ${e.message} at ${e.filename}:${e.lineno}`));
+          addEventListener('unhandledrejection', (e) => post(3, `Unhandled rejection: ${e.reason}`));
         })();
         """
 
