@@ -1,0 +1,4 @@
+sdk/
+*.xcodeproj/
+build/
+.sdk-version
