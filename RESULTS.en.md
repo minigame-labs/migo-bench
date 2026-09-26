@@ -2,39 +2,35 @@
 
 > Chinese is the default; see [RESULTS.md](RESULTS.md). English mirror here.
 > Raw data: `out/results.csv` (steady), `out/stress_*.csv` (stress curve). Every row carries full provenance (Migo version, device, WebView version, timestamp, `fps_source`).
-> **Migo build under test: `sha:9e32a309`** (master) — a release AAR built from that commit with `scripts/build-aar.sh release arm64-v8a`. **This is a trade-off, stated rather than hidden:** the previous pass (2026-08-30) was anchored to `release-tag:v0.9.6`, the AAR you can *download* and byte-compare against the release artefact. This pass is anchored to a commit because what it measures is the work merged after v0.9.6 (#174 sprite batching and the text fast path, #175 shared Skia context for offscreen canvases, and the Apple platform layer, which ships no code path to Android). The cost is that **this pass can be rebuilt but not downloaded** — steps in section 8, full harness record for this session in section 9.1.
-> Raw data `out/matrix.csv` (last 18 rows: 18 interleaved cells across three rounds, **every one through the thermal gate, zero failed cells**, each row carrying its gate verdict). Reduction fixed by `scripts/matrix-summary.py` (median + retained range).
+> **Migo build under test: `release-tag:v0.9.9`** — `migo-0.9.9-android.aar` from the releases page, which anyone can *download* and byte-compare against the release artefact (the previous pass, section 9.1, was anchored to commit `9e32a309` and could only be rebuilt; this pass takes that property back).
+> Raw data `out/matrix.csv` (last 18 rows: 18 interleaved cells across three rounds, **every one through the thermal gate, zero failed cells**, each proved to be drawing before it was measured — MEASURING.md section 11). Reduction fixed by `scripts/matrix-summary.py` (median + retained range).
 > Test build: Migo **release** (opt-z + LTO, the shipping config), host configured as a product would ship it (`setDebugEnabled(false)`).
-> **Everything on this page was re-measured on 2026-09-06 against `9e32a309`.** Three things to know:
+> **Everything on this page was re-measured on 2026-09-26 against v0.9.9**; the full harness record and how to read it are in section 9.2. Two things to know:
 >
-> 1. **Two capture-harness calipers.** The capture script used to `adb install` before every run, while the methodology says not to install between rounds — install resets the ART profile, so the launch right after runs pre-AOT code (the mechanism behind the 522 ms WebView first-frame in §5.2.1). It now installs only when the APK content actually changed, with one discarded run before the matrix (in effect since 2026-08-25). **On 2026-09-06 a second instance of the same family was fixed**: `--migo-aar sha:<commit>` rebuilt the AAR for every migo cell, and the AAR build is not byte-reproducible, so the APK changed and was reinstalled every cell — a bias landing on the migo side only. See the red box in section 9.1. **This page's data was taken after that fix.**
-> 2. **`endless-runner` game-ready reads 7% faster for Migo this pass** (598 vs 643 ms). **Not quoted as a lead**: the 45 ms gap is below this harness's ~50 ms resolution and the ranges overlap (Migo 589–737, WebView 636–645). This cell has never resolved a version difference — the previous pass read 9% slower, the one before that a tie, and v0.9.4 read 10% slower, and every chase reached the same conclusion: it drifts ±100 ms between sessions, more than the gap being read. Section 7 lists it as not quotable.
-> 3. **This page is now anchored to a commit, not a release tag.** The `--migo-aar sha:<commit>` path had never produced a usable row (the build log was written into the version field, so every record spanned multiple lines and the matrix kept only the last); fixed 2026-09-02, see MEASURING.md section 2c.
+> 1. **`endless-runner` game-ready reads 11% slower for Migo this pass** (723 vs 650 ms), and the generated headline says so. **Not quoted as a regression, and not hidden**: Migo's three runs were 605 / 723 / 724 ms, a range that overlaps WebView's 650–651. This cell has never resolved a version difference (the previous pass read 7% faster, the one before 9% slower, earlier a tie, v0.9.4 10% slower); it drifts ±100 ms between sessions. Section 7 lists it as not quotable.
+> 2. **The C ABI host on Android** (no Java; links the released `migo-<v>-capi-android-arm64.tar.gz`) against the Java SDK in one session: no material regression, section 10.
 
 ## 1. TL;DR
 
-Same game, same device, same interaction. **Migo native runtime (release)** vs **Android System WebView**. Positioning: Migo = the source-available native WebView replacement.
+Same game, same device, same interaction. **Migo native runtime (release)** vs **Android System WebView**. Positioning: Migo = a source-available, embeddable native Canvas/WebGL mini-game container (no DOM, CSS or layout; not a general-purpose WebView).
 
 <!-- derived:BEGIN headline — generated by scripts/results-figures.py from out/results.csv; do not hand-edit -->
-- ✅ **Memory: Migo uses 45–54% less** (bunnymark 124 vs 239, endless-runner 215 vs 394, canvasmark 103 vs 225 MB). Fair accounting: WebView counts its separate chromium renderer process (else ~100MB is missed).
-- ✅ **CPU: Migo at a third to a half of WebView (2.4–3.1×)** — bunnymark 2.9×, endless-runner 3.1×, canvasmark 2.4×.
-- **Startup: faster on 6 of 6 measurements.** Faster: bunnymark first frame by 38%, bunnymark game-ready by 23%, endless-runner first frame by 17%, endless-runner game-ready by 7%, canvasmark first frame by 37%, canvasmark game-ready by 12%.
+- ✅ **Memory: Migo uses 44–54% less** (bunnymark 121 vs 232, endless-runner 215 vs 386, canvasmark 101 vs 222 MB). Fair accounting: WebView counts its separate chromium renderer process (else ~100MB is missed).
+- ✅ **CPU: Migo at a third to a half of WebView (2.4–3.0×)** — bunnymark 2.8×, endless-runner 3.0×, canvasmark 2.4×.
+- **Startup: faster on 5 of 6 measurements.** Faster: bunnymark first frame by 36%, bunnymark game-ready by 24%, endless-runner first frame by 17%, canvasmark first frame by 36%, canvasmark game-ready by 13%. Slower: **endless-runner game-ready by 11%**.
 - = **fps: a tie.** Both sides hold a 60 fps median; 1% low is Migo 59, WebView 60.
 <!-- derived:END headline -->
 - = **Heavy load: a tie.** Stressed to 220,000 sprites, the knee is at 40,000 on both sides and the curve is level or 1–2 fps in Migo's favour.
-- ⚖️ **`endless-runner` game-ready: Migo reads 7% faster this pass** (Migo 598 ms,
-  WebView 643 ms; ranges 589-737 and 636-645). **The generated headline above counts
-  it among the wins; this line says it does not count**: the 45 ms gap is below the
-  ~50 ms resolution stated above and the two ranges overlap. **This cell has never
-  resolved a version difference** — the previous pass read 9% slower (709 vs 648),
-  the one before that a tie (663 vs 660), and v0.9.4 read 10% slower (726 vs 660),
-  and every chase reached the same conclusion: it drifts **±100 ms between sessions**
-  on this device, more than the gap being read. Going from "9% slower" to "7% faster"
-  is equally **not** an improvement — that is a cross-session subtraction, which is
-  exactly what section 3 forbids. Settling this cell needs a same-session A/B between
-  builds (see CANVAS2D-SPRITES.md).
-
-> Note: high-end device only so far (Kirin 990). Mid- and low-end devices should widen the memory/startup gaps further — the key next test.
+- ⚖️ **`endless-runner` game-ready: Migo reads 11% slower this pass** (Migo 723 ms,
+  WebView 650 ms). The generated headline counts it as the one slower item; here is how
+  to read it: Migo's runs were 605 / 723 / 724 ms, **a range that overlaps WebView's
+  650-651**, so by the ruler above it is not a difference. **This cell has never resolved a
+  version difference** — the previous pass read 7% faster (598 vs 643), the one before 9%
+  slower (709 vs 648), earlier a tie, v0.9.4 10% slower (726 vs 660) — and every chase
+  reached the same conclusion: it drifts **±100 ms between sessions** on this device, more
+  than the gap being read. Going from "7% faster" to "11% slower" is **not a regression**;
+  that is a cross-session comparison, which section 3 forbids. A version verdict on this
+  cell needs a same-session A/B (see CANVAS2D-SPRITES.md).
 
 ## 2. Test matrix (device × game)
 
@@ -53,30 +49,30 @@ Each cell is the **median of three interleaved rounds** (see §5.2); within a ro
 
 | Metric | WebView | Migo | Delta |
 |---|---|---|---|
-| PSS peak | 239 MB | 124 MB | 48% less |
-| CPU (multicore) | 122% | 42% | 2.9× less |
-| First frame (`Displayed`) | 349 ms | 215 ms | 38% faster |
-| Game-ready (`Fully drawn`) | 522 ms | 404 ms | 23% faster |
+| PSS peak | 232 MB | 121 MB | 48% less |
+| CPU (multicore) | 128% | 46% | 2.8× less |
+| First frame (`Displayed`) | 348 ms | 222 ms | 36% faster |
+| Game-ready (`Fully drawn`) | 527 ms | 398 ms | 24% faster |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 
 ### 3.2 endless-runner (Phaser/WebGL)
 
 | Metric | WebView | Migo | Delta |
 |---|---|---|---|
-| PSS peak | 394 MB | 215 MB | 45% less |
-| CPU (multicore) | 125% | 40% | 3.1× less |
-| First frame (`Displayed`) | 350 ms | 289 ms | 17% faster |
-| Game-ready (`Fully drawn`) | 643 ms | 598 ms | 7% faster |
+| PSS peak | 386 MB | 215 MB | 44% less |
+| CPU (multicore) | 130% | 43% | 3.0× less |
+| First frame (`Displayed`) | 349 ms | 290 ms | 17% faster |
+| Game-ready (`Fully drawn`) | 650 ms | 723 ms | **11% slower** |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 
 ### 3.3 canvasmark (Canvas2D)
 
 | Metric | WebView | Migo | Delta |
 |---|---|---|---|
-| PSS (steady) | 225 MB | 103 MB | 54% less |
-| CPU (multicore) | 172% | 72% | 2.4× less |
-| First frame (`Displayed`) | 346 ms | 219 ms | 37% faster |
-| Game-ready (`Fully drawn`) | 378 ms | 331 ms | 12% faster |
+| PSS (steady) | 222 MB | 101 MB | 54% less |
+| CPU (multicore) | 180% | 76% | 2.4× less |
+| First frame (`Displayed`) | 351 ms | 225 ms | 36% faster |
+| Game-ready (`Fully drawn`) | 375 ms | 328 ms | 13% faster |
 | fps median / 1% low | 60 / 60 | 60 / 59 | tie |
 <!-- derived:END tables -->
 
@@ -165,21 +161,22 @@ A minimal host app, three integrations, single ABI (arm64-v8a), Mate30 Pro, medi
 - One high-end device so far (Huawei Mate30 Pro, Kirin 990). Mid- and low-end are the key next test.
 - Energy uses CPU as a proxy (the test device's battery-stats interface is restricted); real power needs a device without that restriction or an external meter.
 - Absolute numbers move with device state; what this page gives is a within-round, back-to-back comparison (§5.2).
-- endless-runner game-ready is inside the noise and should not be cited as a lead (sections 1 and 9.1) — whichever direction a given session reads it in.
+- endless-runner game-ready is inside the noise and should not be cited as a lead (sections 1, 9.1 and 9.2) — whichever direction a given session reads it in.
 
 ## 8. Reproduce
 
 ```bash
 export PATH=$PATH:$ANDROID_HOME/platform-tools
-# Migo release AAR (shipping config): scripts/build-aar.sh release arm64-v8a (in the migo repo)
+# The full matrix behind sections 1 and 3 (section 5's protocol as code: three interleaved rounds,
+# thermal gate, installed once and left alone, every cell proved to be drawing):
+bash scripts/bench-matrix.sh --device <SERIAL> --migo-aar release-tag:v0.9.9
+python3 scripts/matrix-summary.py --format table          # median + range
+python3 scripts/results-figures.py --markdown en          # the generated blocks in sections 1/3
 
-# Interleaved: both sides back to back within a round, three rounds, median per cell (§5.2)
-for round in 1 2 3; do for g in bunnymark canvasmark endless-runner; do
-  bash scripts/run.sh --runtime webview --game $g --device <SERIAL> --duration 12 --cold-runs 3
-  bash scripts/run.sh --runtime migo    --game $g --device <SERIAL> --duration 12 --cold-runs 3 \
-       --migo-aar <path/to/migo-release.aar>
-done; done
-python3 scripts/compare.py --results out/results.csv --game bunnymark --vs-webview
+# Section 10's C ABI host A/B (the C host is built in the migo repo against the release package:
+#   bash scripts/build-android-c-host.sh arm64-v8a --package <extracted migo-0.9.9-capi-android-arm64>):
+bash scripts/capi-ab.sh --device <SERIAL> --aar migo-0.9.9-android.aar --capi-apk <c-host.apk> \
+     --version v0.9.9 --games "bunnymark endless-runner" --rounds 3 --duration 60
 
 # Temperature-controlled stress A/B (cool-down gate + three-cluster frequency sampling, 2 runs each; §4):
 bash scripts/stress-ab.sh <SERIAL> <path/to/migo-release.aar>
@@ -193,7 +190,7 @@ One entry per full re-measure: which build was under test, whether the harness c
 
 ### 9.1 `9e32a309` (2026-09-06) — everything merged after v0.9.6
 
-**Commit under test** `9e32a309` (master), a **release** AAR built through the `sha:` path. These are the numbers sections 1 and 3 now show. What arrived since v0.9.6 and touches Android is #174 (sprite batching, text fast path, deferred shader links, mip chains) and #175 (offscreen Canvas2D sharing one Skia context, off by default); #176–#189 are the Apple platform layer and ship no Android code path.
+**Commit under test** `9e32a309` (master), a **release** AAR built through the `sha:` path. These were the numbers sections 1 and 3 showed, until the session in 9.2. What arrived since v0.9.6 and touches Android is #174 (sprite batching, text fast path, deferred shader links, mip chains) and #175 (offscreen Canvas2D sharing one Skia context, off by default); #176–#189 are the Apple platform layer and ship no Android code path.
 
 **Harness identical to section 5**: `scripts/bench-matrix.sh`, three interleaved rounds, 60 s per cell, `--cold-runs 3`, **all 18 cells through the cold gate** (soc 29994–34493 mC against a 35000 threshold; longest wait 135 s), **zero failed cells**. 2026-09-06T07:10:58Z – 07:53:18Z. Device TAS-AN00 / Android 12 / SDK 31, WebView `com.huawei.webview 114.0.5.302`. Raw rows: last 18 of `out/matrix.csv`.
 
@@ -220,3 +217,65 @@ One entry per full re-measure: which build was under test, whether the harness c
 **Conclusion: the work merged after v0.9.6 made nothing on the Android side worse, and produced no new claimable lead.** The only thing that changed what the numbers mean this session is the harness fix above, and its direction is to *remove* a bias from the migo side.
 
 **Do not subtract this session from the last one.** Section 3 forbids cross-session comparison, and this session happens to supply a clean example of why: `endless-runner` game-ready went from "Migo 9% slower" last session to "Migo 7% faster" this one, both times with overlapping ranges and a gap below the harness's resolution, and **nothing targeting that cell changed in between.**
+
+### 9.2 `v0.9.9` (2026-09-26) — anchored back to a downloadable release
+
+**Build under test** `release-tag:v0.9.9`, `migo-0.9.9-android.aar` from the releases page. These are the numbers sections 1 and 3 now show.
+Android-relevant changes since 9.1: the GPU readiness wait went from 2 s to 10 s (#303, cold-start tolerance only, nothing in steady state);
+the rest is the Windows/Linux/Apple platform layers and image decoding for the C ABI host (#311, which only takes effect in a host without Java).
+
+**Harness as in section 5**, plus two gates this pass is the first to have:
+every cell proves the screen is drawing before it is measured (`assert_renders`, MEASURING.md section 11 — prompted by the C ABI host printing `fps=60` over a black screen),
+and the thermal gate stops every measured app itself, the C host included. `scripts/bench-matrix.sh`, 3 interleaved rounds, 60 s per cell, `--cold-runs 3`,
+**all 18 cells through the cool-down gate** (soc 34997–35000 mC against a 35000 threshold; longest wait 128 s), **zero failed cells**.
+Time span 2026-09-26T09:54:13Z – 10:55:03Z. Device TAS-AN00 / Android 12 / SDK 31,
+WebView `com.huawei.webview 114.0.5.302`, fps from the same game telemetry on both sides. Raw rows: the last 18 of `out/matrix.csv`.
+
+| Metric | bunnymark | canvasmark | endless-runner |
+|---|---|---|---|
+| First frame ms (WebView → Migo) | 348 → **222** | 351 → **225** | 349 → **290** |
+| Game-ready ms | 527 → **398** | 375 → **328** | 650 → 723 (Migo 605–724) |
+| CPU % (peak window) | 128 → **46** (2.78×) | 180 → **76** (2.37×) | 130 → **43** (3.02×) |
+| Peak PSS MB | 231.6 → **121.1** (−48%) | 222.0 → **101.5** (−54%) | 385.7 → **215.0** (−44%) |
+| fps median | 60 = 60 | 60 = 60 | 60 = 60 |
+| fps 1% low | 60 → 59 | 60 → 59 | 60 → 59 |
+
+**Read with the section 1 ruler:**
+
+- ✅ **Memory −44% to −54%**, **CPU 2.4–3.0×**: tight within-cell ranges, far above noise, same direction and size as 9.1.
+- ✅ **First frame**: bunnymark −126 ms and canvasmark −126 ms are readable; endless-runner −59 ms just clears the line — count it as faster, do not quote a percentage.
+- ⚖️ **Game-ready**: bunnymark −129 ms is readable; canvasmark −47 ms is inside the noise; **endless-runner +73 ms reads as slower, but the ranges overlap** (section 1).
+- = **fps tied**; 60 fps is the vsync ceiling; 1% low Migo 59 / WebView 60.
+
+**Do not subtract this session from 9.1.** Both sides read 3–8 points more CPU than in 9.1 (Migo 42→46, 72→76, 40→43;
+WebView 122→128, 172→180, 125→130) — same direction, same size: that is device state between sessions, not either side changing,
+and exactly why section 3 allows only same-session comparisons. The ratios and reductions (same-session quantities) match 9.1.
+
+## 10. The C ABI host against the Java SDK (same-session A/B)
+
+A different question from the rest of this page: not Migo against WebView, but **the same Migo release, embedded through the C ABI versus through the Java SDK — is steady state any worse?**
+This is the evidence for "Android performance with no material regression" in the migo repo's C ABI freeze list (`include/migo/README.md`).
+
+- **Arms**: Java SDK = this repo's migo shell + the released `migo-0.9.9-android.aar`;
+  C ABI = the migo repo's NativeActivity C host, linked against the released `migo-0.9.9-capi-android-arm64.tar.gz` (bytes from the same release).
+- **Harness**: `scripts/capi-ab.sh`, same Mate 30 Pro, one session, 2 games × 3 interleaved rounds (order alternating), 60 s per cell, thermal gate,
+  every cell proved to be drawing. **Steady state only**: the arms share no "game ready" event, so startup numbers would not compare (MEASURING.md section 6).
+- **Bounds fixed before any number existed**: C ABI median against Java's — fps at least 97%, CPU and PSS at most 105%.
+
+| Game | Metric | Java SDK | C ABI | C/Java | Bound |
+|---|---|---|---|---|---|
+| bunnymark | fps median | 60 | 60 | 1.000 | ✅ |
+| | CPU % | 46 (44–46) | 40 (40–41) | 0.870 | ✅ |
+| | Peak PSS MiB | 121.0 | 118.7 | 0.981 | ✅ |
+| endless-runner | fps median | 60 | 60 | 1.000 | ✅ |
+| | CPU % | 44 (43–44) | 39 (39–39) | 0.886 | ✅ |
+| | Peak PSS MiB | 213.1 | 213.9 | 1.004 | ✅ |
+
+**Verdict: no material regression** (2026-09-26; raw rows `out/capi_ab_20260926T091910Z.csv`).
+The C ABI's 11–13% lower CPU is **not quoted as the C ABI being faster**: the hosts are asymmetric — the Java arm pays one Choreographer callback and one JNI call per frame
+that the C host does not, which is what the C ABI should save, but with n=3 on one device the data supports only "not worse".
+
+> **An earlier smoke run (v0.9.7) does not count, and here is why:** the C host had no image decoder at all then (migo #311);
+> endless-runner kept printing `fps=60` over a black screen, so the C arm's "lower" CPU and memory were a host drawing nothing.
+> Every cell now runs `assert_renders` before it is measured, and the same situation fails the cell instead of producing a flattering number.
+

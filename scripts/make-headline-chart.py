@@ -7,26 +7,55 @@ bar chart over the three benchmark games. Migo = blue (the subject), WebView = g
 rests on color alone. Emits assets/headline-light.svg and assets/headline-dark.svg;
 the README references both via <picture> so GitHub shows the right one per theme.
 
-Numbers are the Mate30 Pro release re-run in RESULTS.md (§3.1/§3.2/§3.3). Update
-them here and re-run:  python3 scripts/make-headline-chart.py
+The numbers come from scripts/results-figures.py -- the same session and the same
+reduction as RESULTS.md's generated blocks -- so re-measuring and re-running this
+is the whole update:  python3 scripts/make-headline-chart.py
 
-They must match RESULTS.md, and for a while they did not: this file kept a set
-from an earlier run (startup "faster 2 of 3", memory "~42%") for long enough that
-the README's headline contradicted the results page it linked to. If you re-measure,
-this file is part of the re-measurement.
+They used to be typed in here, and twice drifted from the page the README links to:
+once for long enough that the headline contradicted RESULTS.md ("faster 2 of 3",
+memory "~42%"), and again until 2026-09-26, when the chart still showed an August
+session two re-measurements old.
 """
+import json
 import os
+import subprocess
+import sys
 
 GAMES = ["Bunnymark", "Endless", "Canvasmark"]  # Pixi / Phaser / Canvas2D
-# metric -> (unit, subtitle, lower_is_better, {game: (webview, migo)})
-PANELS = [
-    ("Memory", "MB PSS", "Migo 47-61% less", {
-        "Bunnymark": (225, 111), "Endless": (379, 201), "Canvasmark": (220, 85)}),
-    ("CPU", "% multi-core", "Migo 2.3-3.0x less", {
-        "Bunnymark": (127, 46), "Endless": (134, 44), "Canvasmark": (171, 74)}),
-    ("Startup", "ms to game-ready", "Migo faster (3 of 3)", {
-        "Bunnymark": (529, 397), "Endless": (647, 609), "Canvasmark": (376, 326)}),
-]
+KEYS = {"Bunnymark": "bunnymark", "Endless": "endless-runner", "Canvasmark": "canvasmark"}
+
+
+def load_panels():
+    """metric -> (unit, subtitle, {game: (webview, migo)}), from the published session."""
+    out = subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "results-figures.py"), "--json"],
+                         check=True, capture_output=True, text=True).stdout
+    figures = json.loads(out)
+    games = figures["games"]
+    global SESSION
+    SESSION = figures["session"]
+
+    def pair(game, metric, scale=1.0):
+        g = games[KEYS[game]]
+        return (g[f"webview_{metric}"]["median"] / scale, g[f"migo_{metric}"]["median"] / scale)
+
+    mem = {g: pair(g, "pss_peak_kb", 1024) for g in GAMES}
+    cpu = {g: pair(g, "cpu_pct") for g in GAMES}
+    ready = {g: pair(g, "game_ready_ms") for g in GAMES}
+    # Ratios from the unrounded medians, as results-figures.py computes them;
+    # only the bar labels are rounded.
+    less = [1 - m / w for w, m in mem.values()]
+    times = [w / m for w, m in cpu.values()]
+    faster = sum(m < w for w, m in ready.values())
+    shown = lambda data: {g: (round(w), round(m)) for g, (w, m) in data.items()}
+    return [
+        ("Memory", "MB PSS", f"Migo {min(less):.0%}-{max(less):.0%} less", shown(mem)),
+        ("CPU", "% multi-core", f"Migo {min(times):.1f}-{max(times):.1f}x less", shown(cpu)),
+        ("Startup", "ms to game-ready", f"Migo faster on {faster} of {len(GAMES)}", shown(ready)),
+    ]
+
+
+SESSION = None
+PANELS = load_panels()
 
 THEMES = {
     "light": dict(ink="#0b0b0b", sub="#52514e", muted="#898781", axis="#c3c2b7",
@@ -95,7 +124,8 @@ def svg(theme_name, t):
                      f'text-anchor="middle" fill="{t["sub"]}">{esc(g)}</text>')
 
     o.append(f'<text x="{ML}" y="{H-16}" font-size="11" fill="{t["muted"]}">'
-             f'fps ties (~58 vs 60) and heavy-load stress is at parity as of #40 - see RESULTS.</text>')
+             f'Median fps 60 on both sides; Endless game-ready is inside run-to-run noise. '
+             f'Session {esc(SESSION)} - see RESULTS.</text>')
     o.append("</svg>")
     return "\n".join(o)
 
