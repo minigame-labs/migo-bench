@@ -101,10 +101,13 @@ _gate_read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
 # run leaving a foreground Activity), and 2026-09-02 (the matrix priming step).
 # Every time the diagnosis was the same and the environment was blameless.
 #
-# So: stop both shells first, then wait. That is not destructive -- the harness
-# force-stops around every measurement anyway -- and it is the half that
-# actually matters: on 2026-09-02 the SoC fell 35675 -> 33023 mC within seconds
-# of the force-stop.
+# So: stop every app the harness measures first, then wait. That is not
+# destructive -- the harness force-stops around every measurement anyway -- and
+# it is the half that actually matters: on 2026-09-02 the SoC fell 35675 ->
+# 33023 mC within seconds of the force-stop. "Every" includes the C ABI host
+# (capture-capi.sh): the gate stopped only the two shells until 2026-09-26, so a
+# C host left running -- by `run.sh --runtime capi`, or an interrupted A/B --
+# kept drawing through the whole wait. capi-ab.sh stopped it itself.
 #
 # The screen is deliberately left ON. `require_one_device` sets `svc power
 # stayon true` because a slept or locked screen stops the game activity and
@@ -112,7 +115,7 @@ _gate_read_int() { "${ADB[@]}" shell cat "$1" 2>/dev/null | tr -d '\r\n '; }
 # another.
 _gate_quiesce() {
   local pkg
-  for pkg in com.migo.bench.migo com.migo.bench.webview; do
+  for pkg in com.migo.bench.migo com.migo.bench.webview com.migo.chost; do
     "${ADB[@]}" shell am force-stop "$pkg" >/dev/null 2>&1 || true
   done
 }
