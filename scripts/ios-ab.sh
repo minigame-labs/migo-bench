@@ -74,12 +74,12 @@ for arm in migo webview; do
     "$IOS/build/Build/Products/Release-iphoneos/$(exe $arm).app" >/dev/null
 done
 
-MODEL="$(xcrun devicectl device info details --device "$DEVICE" --json-output /dev/stdout 2>/dev/null |
-  python3 -c 'import json,sys; d=json.load(sys.stdin)["result"]; print(d["hardwareProperties"]["marketingName"] + ";" + d["deviceProperties"]["osVersionNumber"])')"
+WORK="$(mktemp -d)"
+xcrun devicectl device info details --device "$DEVICE" --json-output "$WORK/details.json" >/dev/null
+MODEL="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["result"]; print(d["hardwareProperties"]["marketingName"] + ";" + d["deviceProperties"]["osVersionNumber"])' "$WORK/details.json")"
 SESSION="$(date -u +%Y%m%dT%H%M%SZ)"
 CSV="$OUT/ios_ab_${SESSION}.csv"
 echo "round,arm,game,device,ios,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,thermal,samples,processes" > "$CSV"
-WORK="$(mktemp -d)"
 
 # Our own apps only: a bench or Migo app left running holds WebKit helpers. Other
 # apps on the phone are not ours to stop; ios_trace.py fails a cell whose WebKit
