@@ -40,6 +40,14 @@ enum Bench {
     static func run(watching view: UIView, progress: @escaping () -> Int) {
         guard seconds > 0 else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) {
+            // Something over the app -- the lock screen, a system alert -- keeps
+            // it inactive. Migo pauses its game then, as a game should, while
+            // WebKit keeps running the page: a cell measured like that compares
+            // a paused arm with a running one.
+            guard UIApplication.shared.applicationState == .active else {
+                report("the app is not active (lock screen or a system alert over it); nothing to measure")
+                exit(1)
+            }
             look(view, first: nil, remaining: 5) { drawing, detail in
                 report("screen \(detail)")
                 guard drawing else {
