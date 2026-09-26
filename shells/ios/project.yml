@@ -17,6 +17,9 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     CURRENT_PROJECT_VERSION: "1"
     MARKETING_VERSION: "1.0"
+    # Without a launch screen iOS runs the app in its legacy 320x480 compatibility
+    # mode, scaled up: neither arm would render at the device's resolution.
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UIRequiresFullScreen: YES
     INFOPLIST_KEY_UIStatusBarHidden: YES
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: >-
