@@ -7,12 +7,12 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
-  <img alt="Migo vs Android System WebView across three games: memory 47-61% lower, CPU 2.3-3.0x lower, game-ready faster on all three; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+  <img alt="Migo vs Android System WebView across three games (v0.9.9, Mate30 Pro): memory 44-54% lower, CPU 2.4-3.0x lower, game-ready faster on two of three with the third inside run-to-run noise; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
 </picture>
 
 <sub>Mate30 Pro · release 构建 · 3 款游戏(Pixi/WebGL、Phaser/WebGL、Canvas2D)· 每根柱子都可溯源到一个钉死的 Migo 版本。完整逐指标数据表 → **[RESULTS.md](RESULTS.md)**(中文)/ **[RESULTS.en.md](RESULTS.en.md)**。</sub>
 
-> **状态 —— Migo 尚处 pre-1.0,持续迭代发布中。** 自 v0.9.0 起,每个版本都发布了可运行、带认证的 AAR —— 用 `--migo-aar release-tag:v0.9.3`(或 [minigame-labs/migo/releases](https://github.com/minigame-labs/migo/releases) 中任意 tag)即可自行复现每一个数字。本仓库就是这些数字背后公开、可审计的证据链。
+> **状态 —— Migo 尚处 pre-1.0,持续迭代发布中。** 自 v0.9.0 起,每个版本都发布了可运行、带认证的 AAR —— 用 `--migo-aar release-tag:v0.9.9`(或 [minigame-labs/migo/releases](https://github.com/minigame-labs/migo/releases) 中任意 tag)即可自行复现每一个数字。本仓库就是这些数字背后公开、可审计的证据链。
 
 > 本仓库兼具两个身份:**展示窗口**(采纳者/怀疑者都能自行重跑)与**回归测试框架**
 > (每一次 Migo 的优化/修复,都用同一套对比重新跑一遍,对照基线)。
@@ -22,7 +22,8 @@
 
 **[RESULTS.md(中文,默认)](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** ——
 设备 × 游戏矩阵 + 逐指标数据表(内存、启动、fps + 压力曲线、CPU、能耗)。
-Mate30 Pro 上的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),均已核对满屏渲染:**内存 Migo 少 47–61% · CPU 少 2.3–3.0× · 三款游戏首帧快 18–38%、可玩快 6–25% · fps 打平(两侧中位数都是 60,1% 低帧 59 vs 60)。** 其中 endless-runner 的可玩领先最薄,引用前先看 §1。
+Mate30 Pro 上对可下载的 v0.9.9 发布件的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),每一格测量前都证明了画面在渲染:**内存 Migo 少 44–54% · CPU 少 2.4–3.0× · 三款游戏首帧快 17–36% · bunnymark 与 canvasmark 可玩快 24% 与 13% · fps 打平(两侧中位数都是 60,1% 低帧 59 vs 60)。** endless-runner 的可玩这一场读到慢 11%,区间重叠;这一格场次间漂 ±100 ms,快慢都不引用 —— 先看 §1。
+Android 上的 **C ABI 宿主**(不写 Java)对 Java SDK,同一发布、同一场次:fps、CPU、内存均无实质回退 —— 见 RESULTS §10。
 ✅ **重载扩展性依然稳健** —— 压测到 22 万个精灵(远超任何真实小游戏的常规负载):两侧拐点都在 4 万,整条曲线逐档持平或 Migo 高 1 fps。本行早先版本还写过"Migo 运行更凉",2026-08-23 复现不出来,已撤回 —— 详见 RESULTS §4。
 
 ## 测什么(以及诚实的权重取舍)
