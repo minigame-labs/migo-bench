@@ -179,6 +179,26 @@ capture_fps() {
   echo "fps_source=game-telemetry"
 }
 
+# assert_renders <label>  -> fails the cell when the screen is one flat colour
+#   that stays the same for 1.5 s. Run after the settle and before any
+#   measurement, on every arm alike. A runtime that stopped drawing still logs its
+#   frame loop's fps=N, and that telemetry is the fps source on EMUI; see
+#   screen_renders.py for the case that motivated it. The repeated looks are for
+#   content that paints one colour on purpose and alternates it (multicanvas);
+#   they are 0.3 s apart because a single look one period later sees the same
+#   phase -- multicanvas's period is exactly 1 s at 60 fps.
+assert_renders() {
+  local first now i
+  first=$("${ADB[@]}" exec-out screencap | python3 "$LIB_DIR/screen_renders.py") && { echo "$first"; return 0; }
+  for i in 1 2 3 4 5; do
+    sleep 0.3
+    now=$("${ADB[@]}" exec-out screencap | python3 "$LIB_DIR/screen_renders.py") && { echo "$now"; return 0; }
+    if [[ -n "$first" && "$now" != "$first" ]]; then echo "$first -> $now"; return 0; fi
+  done
+  echo "ERROR: $1 is not rendering (${first:-no screenshot}, unchanged for 1.5 s); this cell measures nothing" >&2
+  return 1
+}
+
 # capture_mem <pkg> <out_file>  -> dumpsys meminfo
 capture_mem() { "${ADB[@]}" shell dumpsys meminfo "$1" > "$2" 2>/dev/null || true; }
 

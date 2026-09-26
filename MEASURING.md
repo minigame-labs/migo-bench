@@ -277,6 +277,15 @@ rendering checked by sampling pixels.
 > frame. A fast runtime that renders a ninth of the screen is fast for the wrong
 > reason.
 
+The third one was caught by a person looking at the phone. On 2026-09-26 the C
+ABI arm of `capi-ab.sh` ran endless-runner on a black screen: the v0.9.8 C host
+had no image decoder, Phaser's boot threw, and the frame loop kept logging
+`fps=60` -- the fps source EMUI falls back to. Every capture script now calls
+`assert_renders` after the settle and before measuring: a screen that is one flat
+colour and stays unchanged for 1.5 s fails the cell, on every arm alike
+(`scripts/screen_renders.py`). Content that paints one colour on purpose, like
+multicanvas, passes because the colour alternates.
+
 ## 12. "Initialised" is not "worked" — for audio, prove it with sound.
 
 `AudioThread (lazy) started` and `Audio output device: Ok("default")` say a

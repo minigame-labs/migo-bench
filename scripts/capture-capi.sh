@@ -68,6 +68,7 @@ provenance_kv "$PKG" > "${pfx}_meta.txt"
 echo "capi_apk_sha256=$(sha256sum "$APK" | cut -d' ' -f1)" >> "${pfx}_meta.txt"
 "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
 "${ADB[@]}" shell am start -n "$PKG/$ACT" >/dev/null 2>&1; sleep 8   # same settle as capture-migo.sh
+assert_renders "$PKG" >> "${pfx}_meta.txt"
 capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"
 echo "cpu_pct=$(capture_cpu "$PKG")" >> "${pfx}_meta.txt"
 capture_mem "$PKG" "${pfx}_mem.txt"

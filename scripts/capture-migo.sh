@@ -30,6 +30,7 @@ else
   echo "game_ready_ms=$(game_ready_ms "$PKG" "$DISP" "$LAUNCH" "$COLD")" >> "${pfx}_meta.txt"
   "${ADB[@]}" shell am force-stop "$PKG" >/dev/null 2>&1 || true; sleep 2
   "${ADB[@]}" shell am start -n "$PKG/$LAUNCH" $(_migo_launch_extras) $(_asset_extra) >/dev/null 2>&1; sleep 8   # migo game load is async
+  assert_renders "$PKG" >> "${pfx}_meta.txt"
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"
   echo "cpu_pct=$(capture_cpu "$PKG")" >> "${pfx}_meta.txt"
   capture_mem "$PKG" "${pfx}_mem.txt"
