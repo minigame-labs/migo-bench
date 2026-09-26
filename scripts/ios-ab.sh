@@ -108,7 +108,7 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
     -BenchSettle "$SETTLE" -BenchSeconds "$((DUR + 3))" > "$pfx.log" 2>&1 &
   local app=$!
   local waited=0
-  until grep -q "\[bench\] measuring" "$pfx.log"; do
+  until grep -qs "\[bench\] measuring" "$pfx.log"; do
     if ! kill -0 "$app" 2>/dev/null || (( waited > SETTLE + 60 )); then
       echo "[ios-ab] $arm/$game round $round: never started measuring:" >&2
       grep "\[bench\]" "$pfx.log" | grep -v "fps=" >&2 || true
