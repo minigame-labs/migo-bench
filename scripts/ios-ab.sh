@@ -135,12 +135,15 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
 }
 
 echo "[ios-ab] $MODEL, $VERSION, games='$GAMES', $ROUNDS x ${DUR}s -> $CSV"
+FAILED=0
 echo "[ios-ab] warm-up (discarded)"
 for game in $GAMES; do for arm in migo webview; do cell 0 "$arm" "$game" || true; done; done
 for ((r = 1; r <= ROUNDS; r++)); do
   for game in $GAMES; do
     if (( r % 2 )); then order="migo webview"; else order="webview migo"; fi
-    for arm in $order; do cell "$r" "$arm" "$game" || echo "[ios-ab] round $r $arm/$game FAILED (recorded as missing)"; done
+    for arm in $order; do
+      cell "$r" "$arm" "$game" || { echo "[ios-ab] round $r $arm/$game FAILED (recorded as missing)"; FAILED=$((FAILED + 1)); }
+    done
   done
 done
 stop_ours
@@ -165,3 +168,5 @@ for game in dict.fromkeys(r["game"] for r in rows):
         print(f"{'':15} migo/webview: cpu {med['migo']['cpu_pct'] / med['webview']['cpu_pct']:.2f}x, "
               f"footprint {med['migo']['footprint_mb'] / med['webview']['footprint_mb']:.2f}x")
 PY
+# A missing cell is recorded as missing, never retried; the run says so (§10).
+(( FAILED == 0 )) || { echo "[ios-ab] $FAILED cell(s) failed" >&2; exit 1; }
