@@ -1,0 +1,68 @@
+# The two iOS arms of the bench, generated with XcodeGen (`xcodegen generate`).
+# `sdk/` is the Migo Apple SDK a release publishes (migo-<v>-apple-sdk.zip);
+# scripts/ios-ab.sh resolves it. The game bundles are referenced from the two
+# Android shells' asset directories, so all four arms run the same bytes.
+name: MigoBenchIOS
+options:
+  deploymentTarget:
+    iOS: "15.2"
+packages:
+  Migo:
+    path: sdk
+settings:
+  base:
+    DEVELOPMENT_TEAM: ${BENCH_TEAM}
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0"
+    INFOPLIST_KEY_UIRequiresFullScreen: YES
+    INFOPLIST_KEY_UIStatusBarHidden: YES
+    INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: >-
+      UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft
+      UIInterfaceOrientationLandscapeRight
+    GENERATE_INFOPLIST_FILE: YES
+  configs:
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: -O
+targets:
+  MigoBench:
+    type: application
+    platform: iOS
+    sources:
+      - Common
+      - Migo
+      - path: ../migo-shell/app/src/main/assets/game
+        type: folder
+        buildPhase: resources
+      - path: ../migo-shell/app/src/main/assets/game-endless-runner
+        type: folder
+        buildPhase: resources
+      - path: ../migo-shell/app/src/main/assets/game-canvasmark
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Migo
+        product: MigoApplePerformancePlus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.migo.bench.ios.migo
+  WebViewBench:
+    type: application
+    platform: iOS
+    sources:
+      - Common
+      - WebView
+      - path: ../webview-shell/app/src/main/assets/game
+        type: folder
+        buildPhase: resources
+      - path: ../webview-shell/app/src/main/assets/game-endless-runner
+        type: folder
+        buildPhase: resources
+      - path: ../webview-shell/app/src/main/assets/game-canvasmark
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.migo.bench.ios.webview
