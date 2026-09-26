@@ -63,7 +63,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          # Named, because the action's default is `tools platform-tools` and
+          # `tools` -- the SDK Tools package cmdline-tools replaced -- is gone
+          # from the repository: sdkmanager reports "Failed to find package
+          # 'tools'" and exits 1 before anything builds. Same fix as migo's CI.
+          packages: platform-tools
       - name: Assemble webview-shell (debug)
         working-directory: shells/webview-shell
         run: ./gradlew --no-daemon :app:assembleDebug
