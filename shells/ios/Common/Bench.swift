@@ -17,10 +17,10 @@ enum Bench {
         ? nil : UserDefaults.standard.double(forKey: "BenchSeconds")
     /// `-BenchLedger YES`: report this process's memory by ledger and region.
     /// Off in every measured run, because it is not free: the region walk runs
-    /// on the main thread, which also drives the frame clock, and with it on
-    /// every 10 s the presented-frame checks of 2026-09-27 read 6-11 late frames
-    /// per 30 s on both arms against 0-1 without it. A memory investigation
-    /// asks for it; a measurement never does.
+    /// on the main thread, which also drives the frame clock, every 10 s. An
+    /// instrument for memory has no business running while frames and CPU are
+    /// being measured; a memory investigation asks for it, a measurement never
+    /// does.
     static let ledger = UserDefaults.standard.bool(forKey: "BenchLedger")
 
     static func report(_ line: String) {
