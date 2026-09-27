@@ -109,8 +109,8 @@ enum Bench {
     /// says whether that is IOSurfaces, the GPU driver's own allocations or
     /// Core Animation's.
     private static func dirtyByTag() -> String {
-        var address: mach_vm_address_t = 0
-        var size: mach_vm_size_t = 0
+        var address: vm_address_t = 0
+        var size: vm_size_t = 0
         var depth: natural_t = 0
         var dirty: [UInt32: UInt64] = [:]
         let page = UInt64(vm_kernel_page_size)
@@ -120,7 +120,7 @@ enum Bench {
                 MemoryLayout<vm_region_submap_info_data_64_t>.size / MemoryLayout<natural_t>.size)
             let status = withUnsafeMutablePointer(to: &info) {
                 $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                    mach_vm_region_recurse(mach_task_self_, &address, &size, &depth, $0, &count)
+                    vm_region_recurse_64(mach_task_self_, &address, &size, &depth, $0, &count)
                 }
             }
             if status != KERN_SUCCESS { break }
