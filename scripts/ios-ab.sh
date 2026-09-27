@@ -28,19 +28,23 @@
 # Usage:
 #   ios-ab.sh --device <CoreDevice id> --udid <hardware UDID> --version vX.Y.Z --team <TEAM>
 #             [--games "bunnymark endless-runner canvasmark"] [--rounds 3] [--duration 60]
+#             [--arms "migo webview"]
+#   `--arms migo` measures one arm alone: for comparing two builds of Migo while
+#   working on it, never for a Migo-against-WebView figure.
 #   (`xcrun devicectl list devices` gives the first id, `xcrun xctrace list devices` the second.)
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IOS="$DIR/../shells/ios"
 OUT="$DIR/../out"; mkdir -p "$OUT"
 DEVICE=""; UDID=""; VERSION=""; TEAM=""
-GAMES="bunnymark endless-runner canvasmark"; ROUNDS=3; DUR=60; SETTLE=8
+GAMES="bunnymark endless-runner canvasmark"; ROUNDS=3; DUR=60; SETTLE=8; ARMS="migo webview"
 while [[ $# -gt 0 ]]; do case "$1" in
   --device) DEVICE="$2"; shift 2;;
   --udid) UDID="$2"; shift 2;;
   --version) VERSION="$2"; shift 2;;
   --team) TEAM="$2"; shift 2;;
   --games) GAMES="$2"; shift 2;;
+  --arms) ARMS="$2"; shift 2;;
   --rounds) ROUNDS="$2"; shift 2;;
   --duration) DUR="$2"; shift 2;;
   *) echo "unknown arg: $1" >&2; exit 2;;
@@ -48,10 +52,21 @@ esac; done
 [[ -n "$DEVICE" && -n "$UDID" && -n "$VERSION" && -n "$TEAM" ]] || {
   echo "ERROR: --device, --udid, --version and --team are required" >&2; exit 2; }
 
-asset() { [[ "$1" == bunnymark ]] && echo game || echo "game-$1"; }
+# A game's bundle resource, and where its game.json is. `calib-*` are the
+# measurement calibration packages (shells/ios/calibration), shared by both
+# arms; scripts/ios-validate-measurement.sh runs them.
+asset() {
+  case "$1" in
+    bunnymark) echo game ;;
+    calib-*) echo "$1" ;;
+    *) echo "game-$1" ;;
+  esac
+}
 landscape() {
+  local manifest="$DIR/../shells/migo-shell/app/src/main/assets/$(asset "$1")/game.json"
+  [[ "$1" == calib-* ]] && manifest="$IOS/calibration/$1/game.json"
   python3 -c 'import json,sys; print("YES" if json.load(open(sys.argv[1])).get("deviceOrientation") == "landscape" else "NO")' \
-    "$DIR/../shells/migo-shell/app/src/main/assets/$(asset "$1")/game.json"
+    "$manifest"
 }
 bundle() { [[ "$1" == migo ]] && echo com.migo.bench.ios.migo || echo com.migo.bench.ios.webview; }
 exe() { [[ "$1" == migo ]] && echo MigoBench || echo WebViewBench; }
@@ -67,7 +82,7 @@ fi
 
 # Built and installed once, then left alone (§2).
 ( cd "$IOS" && BENCH_TEAM="$TEAM" xcodegen generate -q )
-for arm in migo webview; do
+for arm in $ARMS; do
   xcodebuild -project "$IOS/MigoBenchIOS.xcodeproj" -scheme "$(exe $arm)" -configuration Release \
     -destination "id=$UDID" -derivedDataPath "$IOS/build" -allowProvisioningUpdates -quiet build
   xcrun devicectl device install app --device "$DEVICE" \
@@ -79,7 +94,7 @@ xcrun devicectl device info details --device "$DEVICE" --json-output "$WORK/deta
 MODEL="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["result"]; print(d["hardwareProperties"]["marketingName"] + ";" + d["deviceProperties"]["osVersionNumber"])' "$WORK/details.json")"
 SESSION="$(date -u +%Y%m%dT%H%M%SZ)"
 CSV="$OUT/ios_ab_${SESSION}.csv"
-echo "round,arm,game,device,ios,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,thermal,samples,processes" > "$CSV"
+echo "round,arm,game,device,ios,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,thermal,samples,processes,breakdown" > "$CSV"
 
 # Our own apps only: a bench or Migo app left running holds WebKit helpers. Other
 # apps on the phone are not ours to stop; ios_trace.py fails a cell whose WebKit
@@ -97,24 +112,28 @@ PY
   done
 }
 
-# Read one table out of a saved trace. `xctrace export` (Xcode 16) crashes on
-# about three attempts in five for the same file -- SIGSEGV in objc_release while
-# a Swift-concurrency worker drains its autorelease pool, a race inside the tool
-# -- and every attempt that finishes writes the same bytes (same md5 across runs
-# of one trace). So a crash is retried; ten attempts leave well under a 1% chance
-# of losing a cell to it. This re-reads a finished recording; it never
-# re-measures.
+# Read one table out of a saved trace.
+#
+# `LIBDISPATCH_COOPERATIVE_POOL_STRICT=1` is load-bearing. Building a trace's
+# table of contents, xctrace (Xcode 26.5) loads every recorded process's images
+# in parallel on the Swift-concurrency pool, and one of those jobs over-releases
+# an object: SIGSEGV in objc_release under ProcessLoader.load(), on 60-80% of
+# exports of the same file, worse on a loaded Mac. The variable narrows that pool
+# to one thread, which removes the race: 30 of 30 exports then succeeded, with
+# the table bytes identical to the exports that had survived the race. So an
+# export that still fails is a real failure and is reported, not retried.
 export_table() {  # <trace> <xpath or /trace-toc> <out>
-  local attempt
-  for attempt in 1 2 3 4 5 6 7 8 9 10; do
-    if [[ "$2" == /trace-toc ]]; then
-      xcrun xctrace export --input "$1" --toc > "$3" 2>/dev/null
-    else
-      xcrun xctrace export --input "$1" --xpath "$2" > "$3" 2>/dev/null
-    fi && [[ -s "$3" ]] && return 0
-  done
-  echo "[ios-ab] xctrace export of $2 failed ten times: $1" >&2
-  return 1
+  local status=0
+  if [[ "$2" == /trace-toc ]]; then
+    LIBDISPATCH_COOPERATIVE_POOL_STRICT=1 xcrun xctrace export --input "$1" --toc > "$3" 2> "$3.err" || status=$?
+  else
+    LIBDISPATCH_COOPERATIVE_POOL_STRICT=1 xcrun xctrace export --input "$1" --xpath "$2" > "$3" 2> "$3.err" || status=$?
+  fi
+  if (( status != 0 )) || [[ ! -s "$3" ]]; then
+    echo "[ios-ab] xctrace export of $2 failed (exit $status): $1" >&2
+    tail -3 "$3.err" >&2
+    return 1
+  fi
 }
 
 cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
@@ -182,17 +201,18 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
   kv="$(python3 "$DIR/ios_trace.py" "$pfx.toc.xml" "$opened" "$DUR" "$pfx.sysmon-process.xml" \
     "$pfx.device-thermal-state-intervals.xml" "$pfx.log" "$(exe "$arm")")" || return 1
   val() { sed -n "s/^$1=//p" <<< "$kv"; }
-  echo "$round,$arm,$game,${MODEL%%;*},${MODEL##*;},$VERSION,$(val fps_median),$(val fps_min),$(val cpu_pct),$(val footprint_mb),$(val thermal),$(val samples),\"$(val processes)\"" >> "$CSV"
+  echo "$round,$arm,$game,${MODEL%%;*},${MODEL##*;},$VERSION,$(val fps_median),$(val fps_min),$(val cpu_pct),$(val footprint_mb),$(val thermal),$(val samples),\"$(val processes)\",\"$(val breakdown)\"" >> "$CSV"
   echo "[ios-ab] round $round $arm/$game: fps $(val fps_median) cpu $(val cpu_pct)% footprint $(val footprint_mb) MiB ($(val thermal))"
 }
 
 echo "[ios-ab] $MODEL, $VERSION, games='$GAMES', $ROUNDS x ${DUR}s -> $CSV"
 FAILED=0
 echo "[ios-ab] warm-up (discarded)"
-for game in $GAMES; do for arm in migo webview; do cell 0 "$arm" "$game" || true; done; done
+for game in $GAMES; do for arm in $ARMS; do cell 0 "$arm" "$game" || true; done; done
 for ((r = 1; r <= ROUNDS; r++)); do
   for game in $GAMES; do
-    if (( r % 2 )); then order="migo webview"; else order="webview migo"; fi
+    # Alternate which arm goes first (§3); one arm alone has no order to alternate.
+    if (( r % 2 )); then order="$ARMS"; else order="$(tr ' ' '\n' <<< "$ARMS" | tail -r 2>/dev/null || tr ' ' '\n' <<< "$ARMS" | tac)"; fi
     for arm in $order; do
       cell "$r" "$arm" "$game" || { echo "[ios-ab] round $r $arm/$game FAILED (recorded as missing)"; FAILED=$((FAILED + 1)); }
     done

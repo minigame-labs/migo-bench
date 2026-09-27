@@ -34,6 +34,8 @@ Prints key=value lines:
                 (the figure iOS's memory limit acts on), in MiB
   samples       sampling instants in the window
   processes     name(pid) of everything counted
+  breakdown     each counted process's share: name:cpu%:footprint MiB, so a
+                change in the total can be put down to the process that moved
 """
 import datetime
 import re
@@ -136,6 +138,14 @@ def main():
     print(f"footprint_mb={statistics.median(footprint_at[t] for t in times) / 2**20:.1f}")
     print(f"samples={len(times)}")
     print("processes=" + ",".join(f"{n}({p})" for n, p in sorted(counted, key=lambda c: c[1])))
+    own = {}
+    for time, name, pid, cpu, footprint in rows:
+        if pid in pids:
+            own.setdefault((name, pid), {})[time] = footprint
+    print("breakdown=" + " ".join(
+        f"{name}:{100.0 * (cpu_span[pid][1][1] - cpu_span[pid][0][1]) / window_ns:.1f}:"
+        f"{statistics.median(own[(name, pid)].values()) / 2**20:.1f}"
+        for name, pid in sorted(counted, key=lambda c: c[1])))
 
 
 if __name__ == "__main__":

@@ -45,6 +45,15 @@ targets:
       - path: ../migo-shell/app/src/main/assets/game-canvasmark
         type: folder
         buildPhase: resources
+      - path: calibration/calib-idle
+        type: folder
+        buildPhase: resources
+      - path: calibration/calib-busy
+        type: folder
+        buildPhase: resources
+      - path: calibration/calib-mem
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: Migo
         product: MigoApplePerformancePlus
@@ -64,6 +73,15 @@ targets:
         type: folder
         buildPhase: resources
       - path: ../webview-shell/app/src/main/assets/game-canvasmark
+        type: folder
+        buildPhase: resources
+      - path: calibration/calib-idle
+        type: folder
+        buildPhase: resources
+      - path: calibration/calib-busy
+        type: folder
+        buildPhase: resources
+      - path: calibration/calib-mem
         type: folder
         buildPhase: resources
     settings:
