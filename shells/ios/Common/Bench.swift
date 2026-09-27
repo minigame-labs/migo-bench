@@ -15,6 +15,13 @@ enum Bench {
     static let settle = UserDefaults.standard.double(forKey: "BenchSettle")
     static let seconds: Double? = UserDefaults.standard.object(forKey: "BenchSeconds") == nil
         ? nil : UserDefaults.standard.double(forKey: "BenchSeconds")
+    /// `-BenchLedger YES`: report this process's memory by ledger and region.
+    /// Off in every measured run, because it is not free: the region walk runs
+    /// on the main thread, which also drives the frame clock, and with it on
+    /// every 10 s the presented-frame checks of 2026-09-27 read 6-11 late frames
+    /// per 30 s on both arms against 0-1 without it. A memory investigation
+    /// asks for it; a measurement never does.
+    static let ledger = UserDefaults.standard.bool(forKey: "BenchLedger")
 
     static func report(_ line: String) {
         print("[bench] \(line)")
@@ -62,7 +69,7 @@ enum Bench {
                     exit(1)
                 }
                 report("measuring")
-                reportMemoryLedger()
+                if ledger { reportMemoryLedger() }
                 guard seconds > 0 else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
                     let delivered = progress()
@@ -82,6 +89,7 @@ enum Bench {
     /// taken at: the differences between stages say which part of starting a
     /// game allocated what.
     static func reportMemory(stage: String) {
+        guard ledger else { return }
         report("memory at \(stage): \(ledgerLine()) regions \(dirtyByTag())")
     }
 
