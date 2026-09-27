@@ -100,7 +100,40 @@ enum Bench {
                     + " network=\(mib(info.ledger_tag_network_nonvolatile))"
                     + " media=\(mib(info.ledger_tag_media_footprint))")
         }
+        report("memory regions \(dirtyByTag())")
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) { reportMemoryLedger() }
+    }
+
+    /// Dirty memory by the VM tag each region carries -- what `vmmap` groups by
+    /// -- for the tags above 1 MiB: the ledger says how much is "graphics", this
+    /// says whether that is IOSurfaces, the GPU driver's own allocations or
+    /// Core Animation's.
+    private static func dirtyByTag() -> String {
+        var address: mach_vm_address_t = 0
+        var size: mach_vm_size_t = 0
+        var depth: natural_t = 0
+        var dirty: [UInt32: UInt64] = [:]
+        let page = UInt64(vm_kernel_page_size)
+        while true {
+            var info = vm_region_submap_info_data_64_t()
+            var count = mach_msg_type_number_t(
+                MemoryLayout<vm_region_submap_info_data_64_t>.size / MemoryLayout<natural_t>.size)
+            let status = withUnsafeMutablePointer(to: &info) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                    mach_vm_region_recurse(mach_task_self_, &address, &size, &depth, $0, &count)
+                }
+            }
+            if status != KERN_SUCCESS { break }
+            if info.is_submap != 0 {
+                depth += 1
+                continue
+            }
+            dirty[info.user_tag, default: 0] += UInt64(info.pages_dirtied) * page
+            address += size
+        }
+        return dirty.filter { $0.value >= 1 << 20 }.sorted { $0.value > $1.value }
+            .map { "tag\($0.key)=\(String(format: "%.1f", Double($0.value) / 1_048_576))" }
+            .joined(separator: " ")
     }
 
     private static func look(
