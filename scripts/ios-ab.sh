@@ -80,13 +80,15 @@ if [[ "$(cat "$IOS/.sdk-version" 2>/dev/null)" != "$VERSION" ]]; then
   echo "$VERSION" > "$IOS/.sdk-version"
 fi
 
-# Built and installed once, then left alone (§2).
+# Built and installed once, then left alone (§2). Derived data is kept per SDK
+# version: Swift's precompiled modules of one SDK's headers are otherwise reused
+# against another's, and the build fails on symbols the other never had.
 ( cd "$IOS" && BENCH_TEAM="$TEAM" xcodegen generate -q )
 for arm in $ARMS; do
   xcodebuild -project "$IOS/MigoBenchIOS.xcodeproj" -scheme "$(exe $arm)" -configuration Release \
-    -destination "id=$UDID" -derivedDataPath "$IOS/build" -allowProvisioningUpdates -quiet build
+    -destination "id=$UDID" -derivedDataPath "$IOS/build/$VERSION" -allowProvisioningUpdates -quiet build
   xcrun devicectl device install app --device "$DEVICE" \
-    "$IOS/build/Build/Products/Release-iphoneos/$(exe $arm).app" >/dev/null
+    "$IOS/build/$VERSION/Build/Products/Release-iphoneos/$(exe $arm).app" >/dev/null
 done
 
 WORK="$(mktemp -d)"
