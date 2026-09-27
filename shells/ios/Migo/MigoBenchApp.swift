@@ -57,7 +57,9 @@ final class MigoBenchViewController: BenchViewController {
         guard let gameView = view as? MigoGameView else { return }
         gameView.onEvent = { event in
             switch event {
-            case .ready: Bench.report("ready")
+            case .ready:
+                Bench.report("ready")
+                Bench.reportMemory(stage: "ready")
             case .console(let level, let message): Bench.console(level: level, message: message)
             case .failed(let reason): Bench.report("failed: \(reason)")
             case .error(let code, let message, let recoverable):
@@ -65,6 +67,7 @@ final class MigoBenchViewController: BenchViewController {
             default: break
             }
         }
+        Bench.reportMemory(stage: "view-load")
         gameView.loadGame(id: Bench.asset)
         Bench.run(watching: gameView) { gameView.frameClockStatistics?.delivered ?? 0 }
     }

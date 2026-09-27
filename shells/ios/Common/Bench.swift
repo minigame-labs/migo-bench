@@ -78,7 +78,20 @@ enum Bench {
     /// graphics ledger is IOSurfaces and Metal allocations -- drawables,
     /// textures, buffers -- and `internal` the anonymous memory under them, most
     /// of it the heap. Other processes (WebKit's) cannot be read from here.
+    /// The same ledger once, tagged with the point in the app's life it was
+    /// taken at: the differences between stages say which part of starting a
+    /// game allocated what.
+    static func reportMemory(stage: String) {
+        report("memory at \(stage): \(ledgerLine()) regions \(dirtyByTag())")
+    }
+
     private static func reportMemoryLedger() {
+        report("memory \(ledgerLine())")
+        report("memory regions \(dirtyByTag())")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { reportMemoryLedger() }
+    }
+
+    private static func ledgerLine() -> String {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(
             MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
@@ -87,21 +100,17 @@ enum Bench {
                 task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
             }
         }
-        if status == KERN_SUCCESS {
-            var heap = malloc_statistics_t()
-            malloc_zone_statistics(nil, &heap)
-            let mib = { (bytes: Int64) in String(format: "%.1f", Double(bytes) / 1_048_576) }
-            report(
-                "memory footprint=\(mib(Int64(info.phys_footprint)))"
-                    + " graphics=\(mib(info.ledger_tag_graphics_footprint))"
-                    + " internal=\(mib(Int64(info.internal)))"
-                    + " compressed=\(mib(Int64(info.compressed)))"
-                    + " heap=\(mib(Int64(heap.size_in_use)))"
-                    + " network=\(mib(info.ledger_tag_network_nonvolatile))"
-                    + " media=\(mib(info.ledger_tag_media_footprint))")
-        }
-        report("memory regions \(dirtyByTag())")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { reportMemoryLedger() }
+        guard status == KERN_SUCCESS else { return "unavailable" }
+        var heap = malloc_statistics_t()
+        malloc_zone_statistics(nil, &heap)
+        let mib = { (bytes: Int64) in String(format: "%.1f", Double(bytes) / 1_048_576) }
+        return "footprint=\(mib(Int64(info.phys_footprint)))"
+            + " graphics=\(mib(info.ledger_tag_graphics_footprint))"
+            + " internal=\(mib(Int64(info.internal)))"
+            + " compressed=\(mib(Int64(info.compressed)))"
+            + " heap=\(mib(Int64(heap.size_in_use)))"
+            + " network=\(mib(info.ledger_tag_network_nonvolatile))"
+            + " media=\(mib(info.ledger_tag_media_footprint))"
     }
 
     /// Dirty memory by the VM tag each region carries -- what `vmmap` groups by
