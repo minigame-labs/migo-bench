@@ -147,7 +147,22 @@ Canvas2D 路径两侧都比 WebGL 更吃 CPU,因此 CPU 领先幅度比另外两
 - **内存**:`dumpsys meminfo`,WebView 求和主进程 + `:sandboxed_process`。
 - **启动**:系统 `am` 的 `Displayed` + `Fully drawn`,不解析 app 日志。首帧(`Displayed`)对 WebView 是空白窗口先绘制,两侧含义不同,但两个数都列出。
 - **帧率**:优先 SurfaceFlinger `--latency`;个别设备(如本轮测试机所在的 EMUI)会屏蔽该接口(全 0),此时回退到游戏自身的 rAF 遥测(两侧同源),每行数据记录 `fps_source`。
-- **CPU**:`/proc/<pid>/stat` 增量(WebView 含渲染进程);取多窗口中位数。
+- **CPU**:`/proc/<pid>/stat` 增量(WebView 含渲染进程);取多窗口中位数。同时按簇拆分(每个线程的 `time_in_state` 增量,`scripts/cpu_clusters.py`),
+  结果列 `cpu_by_cluster` / `gcycles_per_s` / `cluster_check`——见 §5.4。
+
+### 5.4 CPU 时间不等于工作量:按簇核验(2026-09-27)
+
+在大小核 SoC 上,同样的工作落在小核低频时读出的 CPU 时间会长好几倍(MEASURING.md §14,在 iPhone 上实测到同一工作 4.7×)。
+所以"Migo CPU 低 2.4–3.0×"必须排除一种可能:Migo 是不是只是跑在了更快的核上。
+Mate30 Pro(麒麟 990:cpu0–3 小核、cpu4–5 中核、cpu6–7 大核),endless-runner,两轮,每格 10 秒窗口:
+
+| 臂 | CPU 时间 | 小核 cpu0 簇 | 中核 cpu4 簇 | 周期(时间×频率) |
+|---|---|---|---|---|
+| Migo | 46–50% | 43.6–44.3% | 0.2% | 0.26–0.28 GHz |
+| WebView | 133–135% | 131.4–131.7% | 3.0–4.6% | 1.33–1.35 GHz |
+
+两臂几乎全在小核上,所以 CPU 时间是同一种核上的比较,结论成立;按周期算差距更大(约 5×),因为 WebView 还把小核抬到了更高频率。
+每线程 `time_in_state` 之和与同一批线程的 `utime+stime` 增量互相核对,差 5% 以内(WebView 一次 6%,渲染进程线程在窗口内有生灭)。
 - **朝向**:WebView 锁竖屏;Migo 按 game.json 原生朝向——两边均渲染整局、像素预算相同。
 - **稳定性**:采集前强制亮屏(`svc power stayon`)。
 

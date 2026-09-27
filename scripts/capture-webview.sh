@@ -31,6 +31,7 @@ else
   assert_renders "$PKG" >> "${pfx}_meta.txt"
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"   # writes ${pfx}_fps.txt + fps_source=...
   echo "cpu_pct=$(capture_cpu "$PKG" sandboxed_process)" >> "${pfx}_meta.txt"   # app + chromium renderer
+  capture_cpu_clusters "$PKG" sandboxed_process 6 >> "${pfx}_meta.txt"
   # Fair PSS: main process + chromium sandboxed renderer (dumpsys meminfo <pkg> omits the renderer).
   "${ADB[@]}" shell dumpsys meminfo 2>/dev/null | tr -d '\r' | python3 "$DIR/webview_pss.py" "$PKG" > "${pfx}_mem.txt"
   echo "[webview] captured: $(grep -E 'first_frame|cpu_pct|fps_source' "${pfx}_meta.txt" | tr '\n' ' ')"

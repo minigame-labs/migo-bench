@@ -17,6 +17,9 @@ COLUMNS = [
     "webview_version", "migo_version", "harness_version", "timestamp",
     "fps_source", "first_frame_ms", "game_ready_ms", "cpu_pct",
     "pss_peak_kb", "fps_median", "fps_1pct_low",
+    # Appended, so every column before them keeps its position: CPU time per
+    # cluster and the cycles it ran (scripts/cpu_clusters.py, MEASURING.md §14).
+    "cpu_by_cluster", "gcycles_per_s", "cluster_check",
 ]
 
 
@@ -53,9 +56,40 @@ def fps_stats(path):
     return str(median), str(low)
 
 
+def ensure(path):
+    """Create the results file, or bring one written under an older column list
+    up to this one.
+
+    Columns are only ever appended, so an older file's header is a prefix of
+    this one and its rows are padded with empty values for the rest -- the data
+    keeps every position it had. Anything else is refused: rows of two
+    schemas under one header would shift every column after the difference.
+    """
+    header = ",".join(COLUMNS)
+    try:
+        lines = open(path).read().splitlines()
+    except FileNotFoundError:
+        lines = []
+    if not lines:
+        with open(path, "w") as f:
+            f.write(header + "\n")
+        return
+    old = lines[0].split(",")
+    if old == COLUMNS:
+        return
+    if COLUMNS[: len(old)] != old:
+        sys.exit(f"{path}: its columns are not a prefix of this harness's; not appending to it")
+    pad = "," * (len(COLUMNS) - len(old))
+    with open(path, "w") as f:
+        f.write(header + "\n")
+        for line in lines[1:]:
+            f.write(line + pad + "\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--header-only", action="store_true")
+    ap.add_argument("--ensure", metavar="CSV")
     ap.add_argument("--label")
     ap.add_argument("--runtime")
     ap.add_argument("--game")
@@ -71,6 +105,9 @@ def main():
 
     if a.header_only:
         print(",".join(COLUMNS))
+        return
+    if a.ensure:
+        ensure(a.ensure)
         return
 
     meta = read_kv(a.meta) if a.meta else {}
@@ -94,6 +131,11 @@ def main():
         "pss_peak_kb": pss_peak_kb(a.mem) if a.mem else "",
         "fps_median": fps_median,
         "fps_1pct_low": fps_low,
+        "cpu_by_cluster": " ".join(
+            f"{k[len('cpu_'):-len('_pct')]}:{v}" for k, v in meta.items()
+            if k.startswith("cpu_cpu") and k.endswith("_pct")),
+        "gcycles_per_s": meta.get("gcycles_per_s", ""),
+        "cluster_check": meta.get("cluster_check", ""),
     }
     # Sanitize: no value may contain a comma (would break the CSV column count).
     print(",".join(str(row[c]).replace(",", ";") for c in COLUMNS))

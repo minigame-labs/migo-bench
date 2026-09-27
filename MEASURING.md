@@ -343,9 +343,10 @@ in the next.
 > An energy figure needs Instruments' Power Profiler, which needs iOS 26; the XS
 > Max stops at iOS 18, so this device can show time per core type and nothing
 > about energy. The Android harness reads `/proc/<pid>/stat` time and has the
-> same exposure on a big/mid/little SoC; its CPU figures are to be re-checked
-> with a frequency-independent count (instructions retired) before they are
-> quoted again.
+> same exposure on a big/mid/little SoC, so every Android cell now records its
+> CPU time per cluster and the cycles it ran (`scripts/cpu_clusters.py`); the
+> published Migo-against-WebView gap was checked that way and holds (RESULTS
+> §5.4).
 
 ## 15. Instruments fails quietly. Make every failure loud.
 

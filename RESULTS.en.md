@@ -137,7 +137,26 @@ between two measurements — writing a 361 MB APK perturbs the cold start right 
 - **Memory**: `dumpsys meminfo`; for WebView, main process + `:sandboxed_process`.
 - **Startup**: the system's own `am` `Displayed` and `Fully drawn`, never app-log parsing. First frame (`Displayed`) means different things on the two sides — WebView paints a blank window first — but both numbers are listed.
 - **fps**: SurfaceFlinger `--latency` where available; some devices (the EMUI build under test) return all zeros, in which case the game's own rAF telemetry is used (identical on both sides). Every row records its `fps_source`.
-- **CPU**: `/proc/<pid>/stat` deltas (WebView includes its renderer process), median over several windows.
+- **CPU**: `/proc/<pid>/stat` deltas (WebView includes its renderer process), median over several windows. Also split by
+  cluster (each thread's `time_in_state` delta, `scripts/cpu_clusters.py`), in the columns `cpu_by_cluster` /
+  `gcycles_per_s` / `cluster_check` -- see §5.4.
+
+### 5.4 CPU time is not work: checked by cluster (2026-09-27)
+
+On a big/little SoC the same work reads several times longer as CPU time when it runs on a little core at a low clock
+(MEASURING.md §14; measured at 4.7x for one workload on an iPhone). So "Migo uses 2.4-3.0x less CPU" has to rule out one
+reading: that Migo merely ran on faster cores. Mate30 Pro (Kirin 990: cpu0-3 little, cpu4-5 mid, cpu6-7 big),
+endless-runner, two rounds, 10 s windows:
+
+| Arm | CPU time | Little (cpu0 cluster) | Mid (cpu4 cluster) | Cycles (time x clock) |
+|---|---|---|---|---|
+| Migo | 46-50% | 43.6-44.3% | 0.2% | 0.26-0.28 GHz |
+| WebView | 133-135% | 131.4-131.7% | 3.0-4.6% | 1.33-1.35 GHz |
+
+Both arms run almost entirely on the little cores, so the CPU-time comparison is one core type against itself and it
+holds. By cycles the gap is wider (about 5x), because WebView also pushes the little cores to higher clocks. The
+per-thread `time_in_state` totals agree with the same threads' `utime+stime` deltas within 5% (one WebView window at 6%:
+renderer threads come and go inside it).
 - **Orientation**: WebView locked portrait, Migo native per game.json — both render the whole game at the same pixel budget.
 - **Stability**: screen forced on before capture (`svc power stayon`).
 
