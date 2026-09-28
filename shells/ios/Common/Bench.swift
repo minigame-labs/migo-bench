@@ -220,11 +220,11 @@ class BenchViewController: UIViewController {
     /// declares both orientations and picks one per run, so launched from a
     /// portrait home screen a landscape run lays out in portrait first and
     /// rotates after. `MigoGameView` fixes a session's size at its first layout
-    /// -- the SDK asks the host to lock orientation before then -- so a game
-    /// loaded at launch ran in a portrait window, stretched, and a landscape
-    /// game waiting for landscape could present nothing at all. Found as a
-    /// black Migo arm in about one landscape launch in three after a portrait
-    /// run (2026-09-28); the WebView arm is held to the same rule so both arms
+    /// -- the SDK asks the host to lock orientation before then -- so a
+    /// landscape game loaded at launch ran in a portrait window (1242x2688 on
+    /// an iPhone XS Max), stretched after the rotation, and the Migo arm's
+    /// landscape cells measured a game laid out for the wrong shape
+    /// (2026-09-28). The WebView arm is held to the same rule, so both arms
     /// start their game in the same window.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()

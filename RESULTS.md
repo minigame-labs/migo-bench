@@ -385,3 +385,8 @@ WebKit 照样会拉起(约 8 MiB,不画东西也去不掉),Networking 进程是 
 **与 v0.9.12 相比(15 Pro,Migo 臂;v0.9.12 是同日 2 轮×30 秒的单臂测量,`ios_ab_20260927T135354Z.csv`)**:bunnymark 184 → 126 MiB、endless-runner 229 → 178、canvasmark 164 → 108,CPU 不变。
 两处改动:画布小于屏幕时 drawable 跟画布尺寸、由 Core Animation 缩放(浏览器合成画布的方式;此前每帧放大进三张全屏
 drawable),以及宿主 WKWebView 缩成离屏的 1×1 点(WebKit 按视图大小给页面留一张底图,全窗口时 11 MiB)。
+
+**核型分布**(CPU Counters `cpu-state`,稳态 10 秒):15 Pro 上两臂几乎全在能效核——Migo App 进程 E/P 为
+16.9/0.4%(bunnymark)、11.7/0.4%(endless-runner)、20.0/0.4%(canvasmark),WKWebView 的 GPU 进程 16.6/0.0%、17.4/1.2%、
+16.6/0.0%,其余进程 P 核都在 0.3% 以内。所以这台手机上两臂的 CPU 时间是在同一种核上比的,MEASURING §14 说的
+"小核低频读数偏大"对两臂同样适用,不改变比较结论。

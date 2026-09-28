@@ -366,3 +366,9 @@ unchanged. Two changes: when the canvas is smaller than the screen the drawable 
 Animation scales it (how a browser composites a canvas; it used to be upscaled into three full-screen drawables every
 frame), and the host WKWebView became a one-point off-screen view (WebKit keeps a backing store for the page at the view's
 size, 11 MiB at the window's).
+
+**Core placement** (CPU Counters `cpu-state`, 10 s of steady state): on the 15 Pro both arms run almost entirely on the
+efficiency cores -- Migo's app process E/P is 16.9/0.4% (bunnymark), 11.7/0.4% (endless-runner) and 20.0/0.4%
+(canvasmark), WKWebView's GPU process 16.6/0.0%, 17.4/1.2% and 16.6/0.0%, and every other process stays within 0.3% on
+the performance cores. So on this phone the two arms' CPU time is compared on the same kind of core; the "efficiency
+cores at a low clock read longer" caveat of MEASURING §14 applies to both alike and does not change the comparison.
