@@ -354,20 +354,60 @@ C 宿主没有;这正是 C ABI 该省下的那部分,但 n=3、单设备,只支�
   两臂各自的核型分布见下文。能耗要 iOS 26 的 Power Profiler:XS Max 最高 iOS 18 测不了;15 Pro 能测,但它按电池放电计,
   手机插着线时读数为零,要在电池供电下录(待补)。
 
-### 11.1 结果:v0.9.13,2026-09-27(UTC)
+### 11.1 结果:v0.9.16,iPhone XS Max,2026-09-28(UTC)
 
-每格是 3 轮×60 秒的中位数(括号为三轮范围),所有格都是 60 fps。发布件 `migo-0.9.13-apple-sdk.zip`,原始行在
-`out/ios_ab_*.csv`(15 Pro:`ios_ab_20260927T192944Z.csv`)。
+每格是 3 轮×60 秒的中位数(括号为三轮范围),所有格都是 60 fps。发布件 `migo-0.9.16-apple-sdk.zip`,原始行
+`out/ios_ab_20260928T180720Z.csv`。
 
-**iPhone 15 Pro(iOS 26.6,A17 Pro)**
+**iPhone XS Max(iOS 18.7,A12)**
+
+| 游戏 | Migo CPU | WKWebView CPU | Migo 内存 | WKWebView 内存 |
+|---|---|---|---|---|
+| bunnymark(PixiJS) | 69.2%(57.3–69.8) | **56.8%**(56.4–59.6) | 102.7 MiB(102.3–102.8) | **74.0 MiB**(73.9–74.3) |
+| endless-runner(Phaser) | 63.6%(63.2–63.8) | **47.1%**(46.8–47.2) | **129.3 MiB**(127.6–130.1) | 201.8 MiB(201.7–204.8) |
+| canvasmark(Canvas2D) | 65.3%(65.3–65.8) | **49.5%**(49.5–49.9) | 90.0 MiB(89.7–90.6) | **59.8 MiB**(59.5–60.5) |
+
+这台手机上 CPU 三款都是 WKWebView 低 12–16 个点;内存 Migo 只在 endless-runner 上低。钱花在哪(同一批数据,
+每进程中位数,CPU % / MiB):
+
+| 游戏 | 臂 | App | WebContent | GPU | Networking |
+|---|---|---|---|---|---|
+| bunnymark | Migo | 31.7 / 30.9 | 19.5 / 56.0 | 0.0 / 9.9 | 17.4 / 5.9 |
+| | WKWebView | 17.0 / 7.5 | 15.7 / 47.6 | 24.2 / 18.8 | 0.0 / 6.6 |
+| endless-runner | Migo | 31.6 / 48.8 | 14.7 / 64.7 | 0.0 / 9.9 | 17.3 / 5.9 |
+| | WKWebView | 14.1 / 7.6 | 12.3 / 170.2 | 20.6 / 24.0 | 0.0 / 6.5 |
+| canvasmark | Migo | 34.1 / 31.5 | 18.2 / 42.7 | 0.0 / 10.0 | 13.1 / 6.0 |
+| | WKWebView | 12.7 / 7.6 | 14.0 / 31.5 | 22.9 / 20.8 | 0.0 / 5.3 |
+
+读法:
+- **渲染本身 Migo 更省**:Migo 在 App 进程(Skia + ANGLE/Metal)花 31.6–34.1%;WKWebView 的渲染分在 App 进程(Core
+  Animation 提交)和 WebKit 的 GPU 进程,两者合计 34.7–41.2%。
+- **差距在两处**:一是 Networking 进程,Performance+ 每帧一上一下两条 WebSocket 消息经它中转,13.1–17.4%,WKWebView 臂
+  没有这一项。每帧两条已是宿主驱动时钟的下限;自定义 scheme 每条消息更贵,`WKScriptMessageHandler` 收不了二进制,
+  所以在这条通道上去不掉。二是 WebContent 多 2.4–4.2 个点,是生产端把绘制录成命令流的代价。
+- **内存**:Migo 的 App 进程 31–49 MiB 是渲染器本身(引擎、Skia、drawable),WKWebView 的对应部分在 GPU 进程
+  (19–24 MiB);WebKit 给 Migo 臂照样拉起 GPU 进程(约 10 MiB,不画东西也去不掉)。endless-runner 上 WKWebView 的
+  WebContent 要 170 MiB,Migo 臂同一个游戏 65 MiB。
+
+**上屏**(Metal System Trace,稳态 8 秒):两臂三款都是 60.0 帧/秒、间隔 p99 16.68 ms、长帧(>1.5 帧)0。
+显示延迟中位数 Migo 14.3–15.3 ms、WKWebView 12.9–13.8 ms:Migo 多一次跨进程,晚 1.4–1.7 ms。
+
+**核型分布**(CPU Counters `cpu-state`,稳态 10 秒):两臂几乎全在能效核——每个进程 P 核都在 1.1% 以内
+(Migo App 进程 E/P 34.8/0.3%、32.8/1.1%、34.1/0.0%,WKWebView 的 GPU 进程 26.0/0.0%、21.3/1.0%、25.2/0.0%)。
+两臂的 CPU 时间是在同一种核上比的;能效核共用一个时钟,所以 CPU 时间仍不是能耗(MEASURING §14)。
+
+### 11.2 iPhone 15 Pro:v0.9.13,2026-09-27(UTC)
+
+发布件 `migo-0.9.13-apple-sdk.zip`,原始行 `out/ios_ab_20260927T192944Z.csv`。**这一批不能和 11.1 直接比**:
+测量时 bench 应用每 10 秒在主线程走一遍内存账本(当时默认开着,后来改成 `-BenchLedger YES` 才开,因为它扰动帧节奏),
+两个 App 还在 `viewDidLoad` 里就启动游戏(后来改为首次布局之后,见 11.3);版本是 v0.9.13(之后改了 1×1 与 socket 端点)。
+2026-09-29 用 v0.9.16 重测时,Instruments 经无线连接起不了录制,每格都失败,重测待手机接线后补。
 
 | 游戏 | Migo CPU | WKWebView CPU | Migo 内存 | WKWebView 内存 |
 |---|---|---|---|---|
 | bunnymark(PixiJS) | **29.4%**(29.3–29.6) | 32.3%(32.3–32.4) | 125.5 MiB(124.1–125.8) | **108.3 MiB**(108.1–108.6) |
 | endless-runner(Phaser) | **21.3%**(19.5–21.5) | 32.0%(32.0–32.1) | **177.5 MiB**(177.1–178.1) | 307.4 MiB(306.8–307.5) |
 | canvasmark(Canvas2D) | **33.4%**(33.2–34.1) | 34.2%(34.2–34.6) | **107.8 MiB**(107.5–108.4) | 121.3 MiB(121.1–121.5) |
-
-CPU 三款都是 Migo 低;内存两款 Migo 低,bunnymark WKWebView 低 17 MiB。钱花在哪(同一批数据,每进程中位数,CPU % / MiB):
 
 | 游戏 | 臂 | App | WebContent | GPU | Networking |
 |---|---|---|---|---|---|
@@ -378,15 +418,31 @@ CPU 三款都是 Migo 低;内存两款 Migo 低,bunnymark WKWebView 低 17 MiB�
 | canvasmark | Migo | 18.0 / 62.6 | 9.0 / 31.4 | 0.0 / 8.0 | 6.3 / 5.9 |
 | | WKWebView | 9.5 / 9.4 | 7.7 / 63.9 | 17.1 / 47.9 | 0.0 / 5.5 |
 
-读法:Migo 的渲染在 App 进程(Skia + ANGLE/Metal),WKWebView 的渲染在 WebKit 的 GPU 进程;Migo 臂的 GPU 进程
-WebKit 照样会拉起(约 8 MiB,不画东西也去不掉),Networking 进程是 Performance+ 每帧一上一下两条消息的中转
-(约 5–7% CPU),这是 WKWebView 臂没有的那部分。
+**核型分布**(15 Pro,同法):两臂几乎全在能效核——Migo App 进程 E/P 为 16.9/0.4%(bunnymark)、11.7/0.4%
+(endless-runner)、20.0/0.4%(canvasmark),WKWebView 的 GPU 进程 16.6/0.0%、17.4/1.2%、16.6/0.0%,其余进程 P 核都在
+0.3% 以内。
 
-**与 v0.9.12 相比(15 Pro,Migo 臂;v0.9.12 是同日 2 轮×30 秒的单臂测量,`ios_ab_20260927T135354Z.csv`)**:bunnymark 184 → 126 MiB、endless-runner 229 → 178、canvasmark 164 → 108,CPU 不变。
-两处改动:画布小于屏幕时 drawable 跟画布尺寸、由 Core Animation 缩放(浏览器合成画布的方式;此前每帧放大进三张全屏
-drawable),以及宿主 WKWebView 缩成离屏的 1×1 点(WebKit 按视图大小给页面留一张底图,全窗口时 11 MiB)。
+两台手机、两个版本、两套装置,结论方向不同:A17 Pro 上 Migo 三款 CPU 都更低,A12 上 WKWebView 三款都更低。
+Networking 中转在 A12 上是 13–17%,在 A17 Pro 上是 4.5–6.9%,差距的大头就在这一项。不能用一台手机的结果代表 iOS。
 
-**核型分布**(CPU Counters `cpu-state`,稳态 10 秒):15 Pro 上两臂几乎全在能效核——Migo App 进程 E/P 为
-16.9/0.4%(bunnymark)、11.7/0.4%(endless-runner)、20.0/0.4%(canvasmark),WKWebView 的 GPU 进程 16.6/0.0%、17.4/1.2%、
-16.6/0.0%,其余进程 P 核都在 0.3% 以内。所以这台手机上两臂的 CPU 时间是在同一种核上比的,MEASURING §14 说的
-"小核低频读数偏大"对两臂同样适用,不改变比较结论。
+### 11.3 版本之间(Migo 臂)
+
+- **v0.9.12 → v0.9.13**(15 Pro;v0.9.12 是同日 2 轮×30 秒的单臂测量,`ios_ab_20260927T135354Z.csv`):bunnymark
+  184 → 126 MiB、endless-runner 229 → 178、canvasmark 164 → 108,CPU 不变。两处改动:画布小于屏幕时 drawable 跟画布
+  尺寸、由 Core Animation 缩放(此前每帧放大进三张全屏 drawable),以及宿主 WKWebView 缩成离屏的 1×1 点(WebKit 按视图
+  大小给页面留一张底图,全窗口时 11 MiB)。
+- **v0.9.14:1×1 退回全窗口**。同机构建、只差这一处的两个 SDK 在 15 Pro 上交错 6 对、每次 30 秒:Canvas2D 游戏晚帧
+  1×1 为每 30 秒 6.3 次、全窗口 4.0 次,6 对全都是 1×1 更差;WebGL 游戏无差别。帧节奏排在内存前面,所以退回全窗口。
+- **v0.9.15:引擎自己终结 WebSocket**。XS Max 上 v0.9.14 与 v0.9.15 同一台 Mac 同法构建、交错 3 对、每对换先后,每格
+  30 秒;两版每秒都是 60 帧上行、60 条下行、60 次排空(`-BenchChannel YES`)。App 进程 CPU bunnymark 35.7 → 31.0%、
+  endless-runner 36.0 → 30.8%、canvasmark 不变;晚帧 9 次测量共 13 次 → 8 次共 4 次。WebKit 两个辅助进程的 CPU 时间
+  涨了与 App 省下的差不多,三进程合计在噪声内持平:两版所有进程都在能效核上,那一簇共用一个时钟,CPU 时间在这里不是
+  能耗(MEASURING §14)。
+- **v0.9.16:偶发黑屏修复**。XS Max 上 endless-runner 约四次启动一次黑屏(v0.9.14、v0.9.15 都有):WebKit 在 Worker 的
+  同步请求期间照常触发计时器,适配器排在零延迟计时器上的 `load` 在游戏包执行到一半时就派发了,Phaser 从未创建。
+  生产端现在把同步调用期间到达的计时器与 socket 事件留到脚本结束后再跑(migo #340),每帧的工作不变。
+- **装置修正(2026-09-28)**:两个 bench App 改为在首次布局、且方向已是本次运行的方向之后才启动游戏
+  (`BenchViewController.startGame`)。之前横屏游戏会先在竖屏窗口(XS Max 上 1242×2688)里排版,Migo 臂的横屏格测的是
+  排错形状的游戏。同日早些时候用 v0.9.15 测的一批(`ios_ab_20260928T061424Z.csv`)因此作废:修正前后 Migo 臂几乎不变
+  (bunnymark 67.4 → 69.2%、canvasmark 65.4 → 65.3%),WKWebView 臂整体下降(canvasmark 72.0 → 49.5%、bunnymark
+  61.1 → 56.8%),而两批之间对 WKWebView 臂有意的改动只有这处装置修正。
