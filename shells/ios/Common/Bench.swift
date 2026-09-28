@@ -209,4 +209,30 @@ class BenchViewController: UIViewController {
     }
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
+
+    /// Start the game. Called once, from the first layout in the run's
+    /// orientation.
+    func startGame() {}
+
+    private var started = false
+
+    /// The game starts in the orientation it runs in, never before. The app
+    /// declares both orientations and picks one per run, so launched from a
+    /// portrait home screen a landscape run lays out in portrait first and
+    /// rotates after. `MigoGameView` fixes a session's size at its first layout
+    /// -- the SDK asks the host to lock orientation before then -- so a game
+    /// loaded at launch ran in a portrait window, stretched, and a landscape
+    /// game waiting for landscape could present nothing at all. Found as a
+    /// black Migo arm in about one landscape launch in three after a portrait
+    /// run (2026-09-28); the WebView arm is held to the same rule so both arms
+    /// start their game in the same window.
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let bounds = view.bounds
+        guard !started, bounds.width >= 1, bounds.height >= 1,
+              (bounds.width > bounds.height) == Bench.landscape
+        else { return }
+        started = true
+        startGame()
+    }
 }

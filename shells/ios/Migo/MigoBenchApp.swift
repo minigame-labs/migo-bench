@@ -52,8 +52,7 @@ final class MigoBenchViewController: BenchViewController {
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    override func startGame() {
         guard let gameView = view as? MigoGameView else { return }
         gameView.onEvent = { event in
             switch event {

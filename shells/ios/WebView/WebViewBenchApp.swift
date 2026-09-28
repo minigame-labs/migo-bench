@@ -56,8 +56,7 @@ final class WebViewBenchViewController: BenchViewController, WKScriptMessageHand
         view = webView
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    override func startGame() {
         guard let webView = view as? WKWebView,
               let directory = Bundle.main.url(forResource: Bench.asset, withExtension: nil)
         else {
