@@ -22,6 +22,11 @@ enum Bench {
     /// being measured; a memory investigation asks for it, a measurement never
     /// does.
     static let ledger = UserDefaults.standard.bool(forKey: "BenchLedger")
+    /// `-BenchChannel YES`: the Migo arm reports what its frame channel carried,
+    /// every 10 s -- messages each way and the drains the engine asked for -- so
+    /// a change in the WebKit processes' CPU can be read against a change in the
+    /// traffic. Off in measured runs, like the ledger.
+    static let channel = UserDefaults.standard.bool(forKey: "BenchChannel")
 
     static func report(_ line: String) {
         print("[bench] \(line)")

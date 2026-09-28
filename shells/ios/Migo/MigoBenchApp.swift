@@ -70,5 +70,15 @@ final class MigoBenchViewController: BenchViewController {
         Bench.reportMemory(stage: "view-load")
         gameView.loadGame(id: Bench.asset)
         Bench.run(watching: gameView) { gameView.frameClockStatistics?.delivered ?? 0 }
+        if Bench.channel {
+            Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak gameView] _ in
+                guard let stats = gameView?.frameChannelStatistics else { return }
+                Bench.report(
+                    "channel t=\(Int(ProcessInfo.processInfo.systemUptime)) frames=\(stats.framesReceived)"
+                        + " refused=\(stats.framesRefused) control=\(stats.controlMessagesReceived)"
+                        + " downlink=\(stats.messagesSent) service=\(stats.serviceMessagesSent)"
+                        + " wakes=\(stats.downlinkWakes)")
+            }
+        }
     }
 }
