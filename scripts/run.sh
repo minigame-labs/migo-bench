@@ -78,7 +78,7 @@ metaf="$OUT/${LABEL}_meta.txt"
 mval() { grep -oE "$1=[0-9a-z.-]+" "$metaf" | head -1 | cut -d= -f2 || true; }
 src="$(mval fps_source)"; cold="$(mval cold_start_ms)"
 gready="$(mval game_ready_ms)"; cpu="$(mval cpu_pct)"
-[[ -f "$OUT/results.csv" ]] || python3 "$DIR/parse.py" --header-only > "$OUT/results.csv"
+python3 "$DIR/parse.py" --ensure "$OUT/results.csv"
 python3 "$DIR/parse.py" --label "$LABEL" --runtime "$RUNTIME" --game "$GAME" \
   --migo-version "$migo_ver" --fps-source "$src" \
   --meta "$metaf" --mem "$OUT/${LABEL}_mem.txt" --fps "$OUT/${LABEL}_fps.txt" \

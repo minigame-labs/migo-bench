@@ -228,6 +228,34 @@ _cpu_once() {
   awk "BEGIN{printf \"%.0f\", ($t1-$t0)/$clk/$win*100}"
 }
 
+# _cluster_snapshot <pids...> -> every thread's utime+stime and time_in_state,
+#   in the format scripts/cpu_clusters.py reads. One shell per snapshot, so the
+#   threads are read as close together in time as the device allows.
+_cluster_snapshot() {
+  "${ADB[@]}" shell "for p in $*; do for t in /proc/\$p/task/*; do \
+    [ -r \$t/time_in_state ] || continue; \
+    echo T \$p \${t##*/} \$(awk '{print \$14+\$15}' \$t/stat 2>/dev/null); \
+    cat \$t/time_in_state 2>/dev/null; done; done" | tr -d '\r'
+}
+
+# capture_cpu_clusters <pkg> [renderer_match] [window_s] -> key=value lines:
+#   CPU time per cluster and the cycles it ran (scripts/cpu_clusters.py), over
+#   the same processes capture_cpu counts. Nothing on a kernel without per-task
+#   time_in_state: the fields are absent rather than zero.
+capture_cpu_clusters() {
+  local pkg="$1" rmatch="${2:-}" win="${3:-6}" clk pids a b
+  clk=$("${ADB[@]}" shell getconf CLK_TCK | tr -d '\r'); clk=${clk:-100}
+  pids=$("${ADB[@]}" shell pidof "$pkg" 2>/dev/null | tr -d '\r')
+  if [ -n "$rmatch" ]; then
+    pids="$pids $("${ADB[@]}" shell "ps -A -o PID,ARGS 2>/dev/null | grep -i '$rmatch' | grep -v grep | awk '{print \$1}'" | tr -d '\r')"
+  fi
+  [ -n "${pids// /}" ] || return 0
+  a=$(mktemp); b=$(mktemp)
+  _cluster_snapshot $pids > "$a"; sleep "$win"; _cluster_snapshot $pids > "$b"
+  if grep -q "^cpu" "$a"; then python3 "$(dirname "${BASH_SOURCE[0]}")/cpu_clusters.py" "$a" "$b" "$clk" "$win"; fi
+  rm -f "$a" "$b"
+}
+
 # capture_cpu <pkg> [renderer_match]  -> prints app CPU% (multi-core, may exceed 100)
 #   /proc/<pid>/stat (utime+stime) delta. For WebView pass "sandboxed_process" so
 #   the chromium renderer's CPU is summed in (fair — same reason the renderer's

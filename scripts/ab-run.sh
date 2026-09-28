@@ -149,7 +149,7 @@ AB="$OUT/jitless_ab.csv"
 if [[ ! -f "$AB" ]]; then
   { printf 'round,arm,gate,'; python3 "$DIR/parse.py" --header-only; } > "$AB"
 fi
-[[ -f "$OUT/results.csv" ]] || python3 "$DIR/parse.py" --header-only > "$OUT/results.csv"
+python3 "$DIR/parse.py" --ensure "$OUT/results.csv"
 
 echo "[ab] device=$SERIAL rounds=$ROUNDS games='$GAMES' duration=${DUR}s cold-runs=$COLD"
 echo "[ab] jit     = $JIT_AAR"

@@ -319,6 +319,58 @@ while RESULTS.md said 3 of 3 and 47–61%.
 
 ---
 
+## 14. CPU time is not work on a chip with two kinds of core.
+
+The iPhone XS Max has two performance cores and four efficiency cores, and the
+scheduler moves threads between them and changes their clocks with load. The
+same work therefore reads as very different amounts of CPU time. Measured with
+the calibration content (`shells/ios/calibration`): Migo's host counted the same
+60 frames received and 120 downlink messages a second in both cases, and its
+app process read **36.6% of a core on the efficiency cores** with nothing else
+running, but **7.7% on the performance cores** once a busy loop in another
+process had pulled the system up. The bookkeeping itself was right: Activity
+Monitor's per-process CPU and the running time summed from Instruments'
+`cpu-state` table agreed within 5%. What was wrong was reading the number as an
+amount of work.
+
+Two consequences. A lower CPU time can mean *faster cores*, which usually costs
+more energy, not less. And two runs of one build differ by a quarter whenever
+placement differs; a V0 endless-runner cell read 78.6% in one round and 53.0%
+in the next.
+
+> **Rule.** Report CPU time with its split by core type (`cpu-state`: `CPU n (E
+> Core)` / `(P Core)`), and compare two numbers only when that split matches.
+> An energy figure needs Instruments' Power Profiler, which needs iOS 26; the XS
+> Max stops at iOS 18, so this device can show time per core type and nothing
+> about energy. The Android harness reads `/proc/<pid>/stat` time and has the
+> same exposure on a big/mid/little SoC, so every Android cell now records its
+> CPU time per cluster and the cycles it ran (`scripts/cpu_clusters.py`); the
+> published Migo-against-WebView gap was checked that way and holds (RESULTS
+> §5.4).
+
+## 15. Instruments fails quietly. Make every failure loud.
+
+Each of these produced a plausible number or a silent gap before the harness
+checked for it:
+
+- **`xctrace export` crashed on 60-80% of runs of the same trace** (SIGSEGV in
+  `objc_release` under `ProcessLoader.load()`, a race in its parallel symbol
+  loading). `LIBDISPATCH_COOPERATIVE_POOL_STRICT=1` serialises that pool and
+  removes the crash; the surviving exports were byte-identical to the rest.
+- **A recording started with a landscape app in front lost the device** after
+  about 35 s ("Device got disconnected"), exited 0 and saved 0.4 s. The harness
+  now starts the recording first and launches the game into it.
+- **A recording can end early without an error.** The window is taken from the
+  console's own timestamps (`[bench] measuring`), and a trace that does not
+  cover it fails the cell.
+- **Arithmetic and attribution are proven on known costs** before a run is
+  used: `scripts/ios-validate-measurement.sh` runs content that is idle, spins
+  8 ms a frame, or holds 256 MiB, in both arms, and checks the readings.
+
+> **Rule.** Nothing Instruments reports is used until the harness has checked
+> the recording covers the window, every table exported, and the calibration
+> reads back its known costs.
+
 ## Checklist for a publishable run
 
 1. Both shells built from current source, installed, and run ≥3 times each.

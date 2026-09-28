@@ -33,6 +33,7 @@ else
   assert_renders "$PKG" >> "${pfx}_meta.txt"
   capture_fps "$PKG" "$DUR" "$pfx" >> "${pfx}_meta.txt"
   echo "cpu_pct=$(capture_cpu "$PKG")" >> "${pfx}_meta.txt"
+  capture_cpu_clusters "$PKG" "" 6 >> "${pfx}_meta.txt"
   capture_mem "$PKG" "${pfx}_mem.txt"
   echo "[migo] captured: $(grep -E 'cold_start_ms|game_ready_ms|cpu_pct|fps_source' "${pfx}_meta.txt" | tr '\n' ' ')"
 fi
