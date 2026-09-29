@@ -242,7 +242,8 @@ print("breakdown=" + " ".join(f"{label}={shares[pid]:.1f}%" for label, pid in zi
 PY
 )" || { echo "[macos-ab] $arm/$game round $round: $kv" >&2; return 1; }
   val() { sed -n "s/^$1=//p" <<< "$kv"; }
-  echo "$round,$arm,$game,${MODEL%%;*},${MODEL##*;},\"$GPU\",$VERSION,$(val fps_median),$(val fps_min),$(val cpu_pct),$(val footprint_mb),$(val cpu_limit_min),$(val samples),\"$(val processes)\",\"$(val breakdown)\"" >> "$CSV"
+  # Quoted: a Mac's model identifier has a comma in it (MacBookPro16,1).
+  echo "$round,$arm,$game,\"${MODEL%%;*}\",\"${MODEL##*;}\",\"$GPU\",$VERSION,$(val fps_median),$(val fps_min),$(val cpu_pct),$(val footprint_mb),$(val cpu_limit_min),$(val samples),\"$(val processes)\",\"$(val breakdown)\"" >> "$CSV"
   echo "[macos-ab] round $round $arm/$game: fps $(val fps_median) cpu $(val cpu_pct)% footprint $(val footprint_mb) MiB (cpu limit $(val cpu_limit_min))"
 }
 
