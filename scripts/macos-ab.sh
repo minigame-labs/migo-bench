@@ -156,6 +156,13 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
   local round="$1" arm="$2" game="$3" pfx="$WORK/$1-$2-$3"
   stop_ours || return 1
   sleep 30
+  # The GPU the session was pinned to, still. A `pmset gpuswitch` that did not
+  # take reads back the old value, and a session that trusted the command
+  # instead of the reading ran a whole set on the wrong GPU (2026-09-29).
+  if [[ "$(pmset -g | awk '$1 == "gpuswitch" {print $2}')" != "$SWITCH" ]]; then
+    echo "[macos-ab] $arm/$game round $round: gpuswitch is no longer $SWITCH" >&2
+    return 1
+  fi
   local base
   base="$(webkit_pids)"
   # Launched directly rather than through `open`, so its output is the
