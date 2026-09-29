@@ -71,7 +71,8 @@ cold-start = `reportFullyDrawn()` + `am start -W`. memory = `dumpsys meminfo`.
 
 ```
 games/       game payloads (bunnymark Pixi/WebGL, endless-runner Phaser/WebGL, canvasmark Canvas2D)
-shells/      webview-shell + migo-shell  (symmetric minimal apps, each loads one game directly)
+shells/      webview-shell + migo-shell (Android, symmetric minimal apps, each loads one game directly);
+             ios (Performance+ vs WKWebView) and macos (V8 vs WKWebView), the Apple arms
 scripts/     lib.sh, capture-*.sh, run.sh, parse.py, compare.py, resolve-migo-aar.sh
 baselines/   pinned reference result rows (regression gate compares new runs against these)
 out/         results.csv + raw logs (gitignored except results.csv)
@@ -101,6 +102,23 @@ column -t -s, out/results.csv
 
 The authoritative numbers, the device × game matrix, and every per-metric table live in
 **[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)** — not duplicated here.
+
+### Apple: Migo against WKWebView (iOS and macOS)
+
+Run on a Mac with Xcode, XcodeGen and an authenticated `gh`. Both drivers resolve the
+release's `migo-<v>-apple-sdk.zip`, build both arms, and prove the measurement on content of
+known cost before any number from them is used (MEASURING.md §15). Results: RESULTS §11 (iOS)
+and §12 (macOS).
+
+```bash
+# iOS -- the iPhone unlocked, Auto-Lock set to Never
+bash scripts/ios-validate-measurement.sh --device <CoreDevice id> --udid <UDID> --version vX.Y.Z --team <TEAM>
+bash scripts/ios-ab.sh                   --device <CoreDevice id> --udid <UDID> --version vX.Y.Z --team <TEAM>
+# macOS -- display awake, session unlocked, nothing else running; on a two-GPU Mac pin one GPU
+sudo pmset -a gpuswitch 1          # 1 discrete, 0 integrated; restore with 2 afterwards
+bash scripts/macos-validate-measurement.sh --version vX.Y.Z
+bash scripts/macos-ab.sh                   --version vX.Y.Z
+```
 
 ### Stress scenario — fps-vs-load curve (`--scenario stress`, bunnymark only)
 

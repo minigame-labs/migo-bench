@@ -378,14 +378,62 @@ cores -- every process stays within 1.1% on the performance cores (Migo's app pr
 34.1/0.0%; WKWebView's GPU process 26.0/0.0%, 21.3/1.0%, 25.2/0.0%). The two arms' CPU time is compared on the same kind
 of core; the efficiency cores share one clock, so CPU time is still not energy (MEASURING §14).
 
-### 11.2 iPhone 15 Pro: v0.9.13, 2026-09-27 (UTC)
+### 11.2 iPhone 15 Pro: v0.9.18, 2026-09-29 (UTC)
+
+The asset is `migo-0.9.18-apple-sdk.zip`; the raw rows are `out/ios_ab_20260929T162435Z.csv`. The harness is 11.1's
+(games start at the first layout, the memory ledger off), recorded over the phone's cable. Each cell is the median of 3
+rounds x 60 s (range in brackets); every cell ran at 60 fps with the thermal state Nominal throughout. **Migo's
+endless-runner has 2 cells**: in the third round's cell two full sets of WebKit helpers (WebContent/GPU/Networking)
+appeared, which cannot be attributed, so the cell is recorded as missing and not rerun (§10). The phone holds no crash
+or jetsam report from that time; the harness now says so explicitly when the content process restarts
+(`[bench] restarted`, and the cell fails with that reason), to tell "Migo restarted its content process" from "another
+app started WebKit". Measured again with that harness the same evening (only Migo's endless-runner, 3 rounds,
+`out/ios_ab_20260929T195742Z.csv`): 3 clean cells, no restart, 16.3% (16.3-16.3) and 189.6 MiB (189.5-189.6) -- the
+same as the two cells above. The table keeps the original session's cells; this rerun only shows the gap was not a
+Migo restart repeating.
+
+| Game | Migo CPU | WKWebView CPU | Migo memory | WKWebView memory |
+|---|---|---|---|---|
+| bunnymark (PixiJS) | **26.6%** (26.5-27.0) | 32.6% (32.6-32.7) | 137.1 MiB (136.9-139.7) | **108.4 MiB** (108.3-108.4) |
+| endless-runner (Phaser) | **16.1%** (16.0-16.3, 2 cells) | 32.9% (32.6-32.9) | **189.9 MiB** (188.8-191.1) | 307.4 MiB (307.3-307.6) |
+| canvasmark (Canvas2D) | **30.7%** (30.4-30.8) | 37.9% (37.5-37.9) | **118.4 MiB** (118.2-119.0) | 121.6 MiB (121.0-129.1) |
+
+Per-process medians, CPU % / MiB:
+
+| Game | Arm | App | WebContent | GPU | Networking |
+|---|---|---|---|---|---|
+| bunnymark | Migo | 11.8 / 67.2 | 7.6 / 55.3 | 0.0 / 8.4 | 7.2 / 6.2 |
+| | WKWebView | 8.2 / 9.3 | 8.8 / 48.2 | 15.7 / 50.9 | 0.0 / 6.9 |
+| endless-runner | Migo | 7.8 / 109.8 | 4.4 / 65.6 | 0.0 / 8.6 | 4.0 / 6.2 |
+| | WKWebView | 7.4 / 9.5 | 7.7 / 246.5 | 17.7 / 51.4 | 0.0 / 6.7 |
+| canvasmark | Migo | 15.0 / 62.6 | 8.7 / 41.4 | 0.0 / 8.4 | 6.9 / 6.2 |
+| | WKWebView | 9.7 / 9.3 | 8.0 / 63.8 | 20.1 / 47.9 | 0.0 / 5.5 |
+
+Reading it:
+- **On the A17 Pro Migo's CPU is lower in all three games** (by 6-17 points). Rendering is 7.8-15.0% of the app process
+  on the Migo arm and 23.9-29.8% of the app and GPU processes together on the WKWebView arm; the Networking relay is only
+  4.0-7.2% on this phone.
+- **Memory**: bunnymark is 29 MiB higher on Migo, canvasmark level, endless-runner 117 MiB lower -- the WKWebView arm's
+  WebContent holds 246 MiB for it and the Migo arm's 66 MiB (Phaser's canvas and textures live in the Migo arm's renderer,
+  in the app process).
+- Against v0.9.13 on the same phone (below), Migo's CPU is 2.7-5.2 points lower in each game and its memory 10.6-12.4 MiB
+  higher, the directions of v0.9.14 (the host web view back from one point to window size; WebKit keeps a backing for the
+  page at the window's size) and v0.9.15 (the engine terminates the socket); but the two sets used different harness
+  states (11.3), so across sessions this is indicative only.
+- **Energy is still to be measured**: the 15 Pro's Power Profiler counts battery drain, reads zero on a cable, and has to
+  be recorded on battery power.
+- The two phones still point different ways: on the A17 Pro Migo's CPU is lower in all three games, on the A12 (11.1)
+  WKWebView's is, and the difference is mostly the Networking relay (13-17% on the A12). One phone's result does not
+  stand for iOS.
+
+#### Earlier: v0.9.13, 2026-09-27 (UTC)
 
 The asset is `migo-0.9.13-apple-sdk.zip`; the raw rows are `out/ios_ab_20260927T192944Z.csv`. **This set does not compare
 directly with 11.1**: the bench apps walked their memory ledger on the main thread every 10 s (on by default then, now
 only with `-BenchLedger YES`, since it perturbs frame pacing), both apps started their game from `viewDidLoad` (now from
 the first layout, see 11.3), and the release is v0.9.13 (the one-point view and the socket endpoint have changed
-since). A rerun with v0.9.16 on 2026-09-29 failed in every cell: Instruments could not start a recording over the
-wireless connection. It is due once the phone is on its cable.
+since). A rerun with v0.9.16 over the wireless connection on 2026-09-29 could not start Instruments' recording; the
+rerun on the cable, with v0.9.18, is above.
 
 | Game | Migo CPU | WKWebView CPU | Migo memory | WKWebView memory |
 |---|---|---|---|---|
@@ -438,3 +486,67 @@ Pro, and it is most of the difference. One phone's result does not stand for iOS
   earlier the same day (`ios_ab_20260928T061424Z.csv`) is superseded by it: across the correction the Migo arm barely
   moved (bunnymark 67.4 -> 69.2%, canvasmark 65.4 -> 65.3%) while the WKWebView arm dropped (canvasmark 72.0 -> 49.5%,
   bunnymark 61.1 -> 56.8%), and this correction is the only deliberate change to the WKWebView arm between the two sets.
+
+## 12. macOS: V8 against WKWebView (same-session A/B)
+
+Unlike iOS, **the two arms run different JavaScript engines on macOS**: Migo runs V8 with its JIT in the app process
+(`MigoGameView`; macOS does not restrict third-party JITs), WKWebView runs JavaScriptCore in its WebContent process. Both
+arms run at 60 fps, so the question is still what the same picture costs each of them in CPU and memory.
+
+- **Machine**: a MacBookPro16,1 (i7-9750H, Intel UHD 630 + AMD Radeon Pro 5300M), macOS 26.6.2. **One Intel Mac only**;
+  Apple silicon is not measured.
+- **Arms**: `shells/macos`'s MigoBenchMac (`MigoGameView`, linked against the published `migo-0.9.19-apple-sdk.zip`,
+  sha256 `13308a53…a2567a`, the same bytes as the GitHub Release) and WebViewBenchMac (`WKWebView`). Each arm is its app
+  process plus the WebKit helpers that appeared after it launched (attributed against a baseline, MEASURING §16).
+- **Harness**: `scripts/macos-ab.sh`. CPU = the processes' CPU time over the 60 s window, divided by the window;
+  memory = the processes' `phys_footprint` at the end of the window; fps = the game's own telemetry. 3 interleaved rounds,
+  the order swapped each round, one warm-up round discarded. Each cell proves the window is drawing before it measures.
+- **The GPU is pinned** (`pmset gpuswitch`). **Memory is read from the integrated-GPU set**: its textures and buffers live
+  in system memory and count in `phys_footprint` for both arms. Discrete-GPU VRAM counts for neither, so that set is read
+  for CPU.
+- **Calibration** (`scripts/macos-validate-measurement.sh`, integrated GPU, v0.9.19, `out/macos_ab_20260929T213447Z.csv`):
+
+| Calibration | Migo arm | WebView arm | Expected |
+|---|---|---|---|
+| Idle page | 12.6% / 44.5 MiB | 22.5% / 70.5 MiB | -- |
+| 8 ms busy-wait per frame: CPU of the process running content | App 60.3% (+47.7 over idle) | WebContent 50.6% (+42.8 over idle) | the wait itself is 48% |
+| Fill and hold 256 MiB: memory increase | +251 MiB | +261 MiB | 256 +/-10% |
+
+### 12.1 Integrated GPU (Intel UHD 630): v0.9.19, 2026-09-29 (UTC)
+
+Raw rows `out/macos_ab_20260929T215611Z.csv`. Each cell is the median of 3 rounds x 60 s (range in brackets); every
+median fps is 60.
+
+| Game | Migo CPU | WKWebView CPU | Migo memory | WKWebView memory |
+|---|---|---|---|---|
+| bunnymark (PixiJS) | **13.1%** (11.7-13.3) | 25.5% (25.5-26.0) | **69.5 MiB** (68.5-70.0) | 79.9 MiB (79.8-80.9) |
+| endless-runner (Phaser) | **13.8%** (12.2-13.8) | 20.6% (20.4-20.6) | **99.0 MiB** (93.0-104.0) | 202.4 MiB (202.4-202.4) |
+| canvasmark (Canvas2D) | **16.8%** (16.8-16.9) | 25.6% (25.2-25.7) | **50.0 MiB** (50.0-51.0) | 60.9 MiB (59.7-61.0) |
+
+WKWebView per-process CPU medians (App / WebContent / GPU / Networking): bunnymark 6.9 / 8.1 / 10.6 / 0.0,
+endless-runner 5.6 / 6.1 / 8.8 / 0.0, canvasmark 5.8 / 8.8 / 11.0 / 0.0. The Migo arm is its app process alone.
+
+### 12.2 Discrete GPU (AMD Radeon Pro 5300M): v0.9.19, 2026-09-29 (UTC)
+
+Raw rows `out/macos_ab_20260929T223713Z.csv`. Memory excludes VRAM for both arms and is shown for reference only.
+
+| Game | Migo CPU | WKWebView CPU | Migo memory | WKWebView memory |
+|---|---|---|---|---|
+| bunnymark (PixiJS) | **14.0%** (11.5-14.0) | 24.8% (24.7-25.0) | 53.5 MiB (52.0-54.0) | 77.8 MiB (77.7-77.8) |
+| endless-runner (Phaser) | **11.5%** (11.3-12.2) | 17.8% (17.8-17.9) | 65.0 MiB (63.0-84.5) | 102.4 MiB (102.4-102.5) |
+| canvasmark (Canvas2D) | **15.6%** (15.4-16.1) | 20.5% (20.1-20.5) | 41.0 MiB (41.0-44.0) | 74.0 MiB (73.9-75.9) |
+
+WKWebView per-process CPU medians: bunnymark 6.3 / 7.5 / 11.0 / 0.0, endless-runner 4.2 / 5.2 / 8.5 / 0.0,
+canvasmark 5.0 / 6.9 / 8.6 / 0.0. The v0.9.18 discrete set on the same Mac (`out/macos_ab_20260929T174035Z.csv`) agrees
+(Migo 12.0 / 11.9 / 15.8%, WKWebView 25.0 / 18.0 / 20.0%).
+
+Reading it:
+- **CPU**: Migo is lower on all three games on both GPUs; on the integrated GPU WKWebView uses 1.5-2.0x Migo's. WKWebView's
+  GPU process alone is 8.5-11.0%; Migo keeps JS, rendering and compositing in its one app process, 11.5-16.8% in all.
+- **Memory** (integrated GPU): Migo is lower on all three -- 10 MiB on bunnymark, 11 MiB on canvasmark, 103 MiB (half) on
+  endless-runner.
+- **fps ties** (a median of 60 in both arms). That is not evidence of faster JS, and with two different engines this A/B
+  does not compare JS at all.
+- **The integrated set needs v0.9.19**: with the integrated GPU pinned, v0.9.18's Migo window was black (ANGLE took the
+  discrete GPU by default; fixed in migo #348), so that set could not be measured before.
+- One Intel Mac says nothing about Apple silicon, and CPU time is not energy.
