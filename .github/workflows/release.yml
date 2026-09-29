@@ -1,0 +1,37 @@
+name: release
+
+# A tag vX.Y.Z -- the Migo runtime release it goes out beside -- publishes the
+# three bench games as installable Migo game packages, for the download page and
+# its mainland mirror. They are the packages the published results were
+# measured on (scripts/package-games.py).
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package the games
+        run: python3 scripts/package-games.py "$GITHUB_REF_NAME" dist
+
+      # Build provenance for each zip, verifiable with
+      # `gh attestation verify <zip> -R minigame-labs/migo-bench`.
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*.zip'
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS.txt \
+            --title "migo-bench games $GITHUB_REF_NAME" \
+            --notes "The three bench games as Migo game packages, published beside Migo $GITHUB_REF_NAME: bunnymark (PixiJS, WebGL), endless-runner (Phaser 3, WebGL) and canvasmark (Canvas 2D) -- the packages the results in RESULTS.md were measured on. Each zip unpacks to a directory with game.js and game.json that installs on any Migo host, with this repository's MIT licence and the third-party notices the game carries. Checksums are in SHA256SUMS.txt; build provenance verifies with \`gh attestation verify <zip> -R minigame-labs/migo-bench\`."
