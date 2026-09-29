@@ -141,6 +141,17 @@ push — real-device capture stays local (a hosted runner has no phone).
 The harness takes `--migo-aar <release-tag | local:PATH | sha>` so a WIP fix benches against a
 local dev AAR and published numbers pin a release tag. Every result stamps the resolved version.
 
+## Game packages
+
+Every release tag `vX.Y.Z` -- published beside the Migo runtime release of that
+version -- attaches the three games as installable Migo game packages
+(`bunnymark-<version>.zip`, `endless-runner-<version>.zip`,
+`canvasmark-<version>.zip`) on
+[Releases](https://github.com/minigame-labs/migo-bench/releases) and on the
+[download page](https://minigame-labs.com/download.html): `game.js` and
+`game.json` exactly as the Migo shell installs them, with the licence notices.
+`scripts/package-games.py` builds them reproducibly, and CI runs it on every change.
+
 ## Contact
 
 - Commercial licensing: licensing@minigame-labs.com

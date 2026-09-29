@@ -39,6 +39,11 @@ jobs:
       - name: Published figures are derived from the raw rows
         run: bash scripts/test-results-figures-derived.sh
 
+      # What a release tag publishes, packaged on every change so a release is
+      # never the first time it runs.
+      - name: Game packaging
+        run: python3 scripts/package-games.py v0.0.0 "$RUNNER_TEMP/games"
+
       - name: Showcase table renders (Migo vs WebView, fixture)
         run: python3 scripts/compare.py --results tests/fixtures/compare_results.csv --game bunnymark --vs-webview
 

@@ -125,6 +125,15 @@ harness 接受 `--migo-aar <release-tag | local:PATH | sha>`,因此一个进行�
 可以对照本地开发版 AAR 跑基准,已发布的数字则钉死某个 release tag。每条结果都会
 标注实际解析出的版本号。
 
+## 游戏包
+
+每个发布 tag `vX.Y.Z`（与同版本的 Migo 运行时一起发布）都会在
+[Releases](https://github.com/minigame-labs/migo-bench/releases) 和
+[下载页](https://minigame-labs.com/download.html) 附上三款游戏的可安装 Migo 游戏包
+（`bunnymark-<版本>.zip`、`endless-runner-<版本>.zip`、`canvasmark-<版本>.zip`）：
+与 Migo shell 安装的 `game.js`、`game.json` 完全一致，并带许可证声明。
+由 `scripts/package-games.py` 可复现地构建，CI 在每次改动时都会跑一遍。
+
 ## 联系方式
 
 - 商业授权:licensing@minigame-labs.com
