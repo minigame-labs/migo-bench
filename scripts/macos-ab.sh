@@ -13,8 +13,11 @@
 #
 # An arm is its app process plus the WebKit helpers it started -- the rule the
 # Android and iOS harnesses apply. Helpers are the com.apple.WebKit.* processes
-# that started after the app did; the harness refuses to measure with any such
-# process already running, so none can be another app's.
+# that were not running just before the app was launched: other apps' helpers
+# (a menu-bar app built on a web view, say) are left out by construction. A Migo
+# cell in which any new WebKit process appears is refused, since no helper of
+# its own exists to explain it; the WebView arm relies on nothing else starting
+# one during a cell, which is why the Mac must otherwise be idle.
 #
 # Per cell: 30 s idle; launch the arm into a window of fixed size; the app proves
 # after the settle that its window is visible and drawing and prints
@@ -83,14 +86,7 @@ else
   GPU="$GPUS"
 fi
 
-# Nothing WebKit may be running before a cell starts, or a helper could not be
-# attributed to the arm that is measured.
-webkit_pids() { pgrep -f 'com\.apple\.WebKit\.(WebContent|GPU|Networking)' || true; }
-if [[ -n "$(webkit_pids)" ]]; then
-  echo "ERROR: WebKit processes are already running (Safari, Mail, another app with a web view):" >&2
-  ps -o pid=,command= -p "$(webkit_pids | paste -sd, -)" >&2
-  echo "quit what owns them first" >&2; exit 2
-fi
+webkit_pids() { pgrep -f 'com\.apple\.WebKit\.(WebContent|GPU|Networking)' | sort || true; }
 
 # The release's Apple SDK, exactly as published.
 if [[ "$(cat "$MAC/.sdk-version" 2>/dev/null)" != "$VERSION" ]]; then
@@ -115,13 +111,20 @@ CSV="$OUT/macos_ab_${SESSION}.csv"
 echo "round,arm,game,mac,macos,gpu,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,cpu_limit_min,samples,processes,breakdown" > "$CSV"
 WORK="$(mktemp -d)"
 
+# Quit the bench apps and wait for the helpers they started (the pids given) to
+# go: a helper outlives its app by a moment, and one that stayed would sit in
+# the next cell's baseline, invisible to it but still using the machine.
 stop_ours() {
   pkill -x MigoBenchMac 2>/dev/null || true
   pkill -x WebViewBenchMac 2>/dev/null || true
-  # A WebKit helper outlives its app by a moment; wait it out, then refuse to
-  # go on if one stays -- it would be counted in the next cell.
-  for _ in $(seq 1 20); do [[ -z "$(webkit_pids)" ]] && return 0; sleep 0.5; done
-  echo "[macos-ab] WebKit processes did not exit: $(webkit_pids | paste -sd' ' -)" >&2
+  local pid left
+  for _ in $(seq 1 20); do
+    left=""
+    for pid in "$@"; do kill -0 "$pid" 2>/dev/null && left+="$pid "; done
+    [[ -z "$left" ]] && return 0
+    sleep 0.5
+  done
+  echo "[macos-ab] WebKit helpers did not exit: $left" >&2
   return 1
 }
 
@@ -152,6 +155,8 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
   local round="$1" arm="$2" game="$3" pfx="$WORK/$1-$2-$3"
   stop_ours || return 1
   sleep 30
+  local base
+  base="$(webkit_pids)"
   # Launched directly rather than through `open`, so its output is the
   # harness's. MIGO_CAPI_LOG=error puts the Migo arm's console.error lines --
   # the fps telemetry -- on its stderr; the WebView arm forwards its console
@@ -164,7 +169,7 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
     if grep -qs "\[bench\] \(failed\|not rendering\|the window is not visible\)" "$pfx.log" || (( SECONDS > deadline )); then
       echo "[macos-ab] $arm/$game round $round: never started measuring:" >&2
       grep "\[bench\]" "$pfx.log" | grep -v "fps=" >&2 || true
-      stop_ours || true; return 1
+      stop_ours $(comm -13 <(echo "$base") <(webkit_pids)) || true; return 1
     fi
     sleep 0.25
   done
@@ -172,13 +177,15 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
   opened="$(grep -m1 "\[bench\] measuring" "$pfx.log" | cut -d' ' -f1)"
   local main
   main="$(pgrep -x "$(exe "$arm")" | head -1)"
-  # The arm: the app, and every WebKit helper running now. None ran before the
-  # launch (stop_ours), so each one was started by this app.
-  local pids="$main $(webkit_pids | paste -sd' ' -)"
-  if [[ "$arm" == migo && "$pids" != "$main " ]]; then
-    echo "[macos-ab] migo/$game round $round: WebKit processes appeared during a Migo cell: $pids" >&2
-    stop_ours || true; return 1
+  # The arm: the app, and every WebKit helper that was not running just before
+  # it was launched.
+  local helpers
+  helpers="$(comm -13 <(echo "$base") <(webkit_pids) | paste -sd' ' -)"
+  if [[ "$arm" == migo && -n "$helpers" ]]; then
+    echo "[macos-ab] migo/$game round $round: WebKit processes appeared during a Migo cell: $helpers" >&2
+    stop_ours $helpers || true; return 1
   fi
+  local pids="$main $helpers"
   local names="" pid
   for pid in $pids; do names+="$(ps -o comm= -p "$pid" | xargs basename),"; done
   : > "$pfx.cpu0"; : > "$pfx.fp"; : > "$pfx.therm"
@@ -199,7 +206,7 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
   # Still running at the end of the window, or the window measured something else.
   local alive=1
   kill -0 "$main" 2>/dev/null || alive=0
-  stop_ours || true
+  stop_ours $helpers || true
   if (( ! alive )) || grep -q gone "$pfx.cpu1"; then
     echo "[macos-ab] $arm/$game round $round: a process of the arm ended inside the window" >&2
     tail -3 "$pfx.log" >&2; return 1
