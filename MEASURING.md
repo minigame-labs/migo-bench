@@ -371,6 +371,40 @@ checked for it:
 > the recording covers the window, every table exported, and the calibration
 > reads back its known costs.
 
+## 16. On a Mac, say which processes and which memory.
+
+`scripts/macos-ab.sh` asks the iOS question on a Mac, where nothing is as
+controlled as a phone the harness owns:
+
+- **Another app's web view is always there.** A menu-bar app built on a web view
+  (the lab Mac's proxy is one) keeps WebKit's WebContent, GPU and Networking
+  processes running. An arm's helpers are therefore the WebKit processes that
+  were not running just before its app launched; a Migo cell in which one
+  appears fails, since Migo starts none. Safari and the like are quit first.
+- **A two-GPU Mac picks a GPU per app.** An app that does not declare automatic
+  switching forces the discrete GPU; WebKit's GPU process follows its own policy.
+  Both bench apps declare it and the session pins one GPU with `pmset gpuswitch`;
+  the harness refuses to run unpinned and records which GPU it was.
+- **Memory on a discrete GPU is partly invisible.** Textures and buffers on the
+  discrete GPU live in its VRAM, which `phys_footprint` does not count -- for
+  either arm. On the integrated GPU, as on every Apple-silicon Mac, graphics
+  memory is system memory and is counted. So memory is read on the integrated
+  GPU; a discrete-GPU session is reported for CPU with that said beside it.
+- **The Migo arm's console is the engine's log.** `MigoGameView` on macOS has no
+  console event: the game's `console.error` lines, the fps telemetry, reach the
+  harness on stderr with `MIGO_CAPI_LOG=error`, as the WebView arm's arrive
+  through its script bridge -- the same lines, filtered the same way.
+- **Pixels, still** (§11). Each app images its own window through the window
+  server -- composited pixels, so the Migo arm's `CAMetalLayer` is in them -- and
+  a process may do that for its own windows without the screen-recording
+  permission.
+- **Calibrated like iOS** (§15): `scripts/macos-validate-measurement.sh` runs
+  the same idle / 8 ms spin / 256 MiB content in both arms first.
+
+> **Rule.** A Mac result names its model, GPU and the GPU setting, attributes
+> helpers against a baseline taken at launch, and reads memory where graphics
+> memory is counted.
+
 ## Checklist for a publishable run
 
 1. Both shells built from current source, installed, and run ≥3 times each.

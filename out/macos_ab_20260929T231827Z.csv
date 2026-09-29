@@ -1,0 +1,7 @@
+round,arm,game,mac,macos,gpu,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,cpu_limit_min,samples,processes,breakdown
+1,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,57,12.3,93.0,100,6,"MigoBenchMac","MigoBenchMac=12.3%"
+2,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,57,12.4,108.0,100,6,"MigoBenchMac","MigoBenchMac=12.4%"
+3,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,57,13.5,111.5,100,6,"MigoBenchMac","MigoBenchMac=13.5%"
+4,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,57,13.6,98.0,100,6,"MigoBenchMac","MigoBenchMac=13.6%"
+5,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,58,13.7,87.5,100,6,"MigoBenchMac","MigoBenchMac=13.7%"
+6,migo,endless-runner,"MacBookPro16,1","26.6.2","integrated (Intel UHD Graphics 630)",v0.9.19,60,57,13.4,100.5,100,6,"MigoBenchMac","MigoBenchMac=13.4%"

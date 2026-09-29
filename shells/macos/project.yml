@@ -1,0 +1,104 @@
+# The two macOS arms of the bench, generated with XcodeGen (`xcodegen generate`).
+# `sdk/` is the Migo Apple SDK a release publishes (migo-<v>-apple-sdk.zip);
+# scripts/macos-ab.sh resolves it. The game bundles are referenced from the two
+# Android shells' asset directories and the calibration from the iOS shell's, so
+# every arm on every platform runs the same bytes.
+#
+# Both arms are ad-hoc signed under the hardened runtime, as a shipping Mac app
+# is; the Migo arm adds `allow-jit` for V8 and embeds ANGLE, as the Apple SDK
+# README asks. Both declare automatic graphics switching, so neither app forces
+# the discrete GPU on a two-GPU Mac by itself: the harness pins the GPU for the
+# whole session instead, the same one for both arms.
+name: MigoBenchMac
+options:
+  deploymentTarget:
+    macOS: "11.0"
+packages:
+  Migo:
+    path: sdk
+settings:
+  base:
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: YES
+    SWIFT_VERSION: "5.0"
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_NSPrincipalClass: NSApplication
+    INFOPLIST_KEY_NSSupportsAutomaticGraphicsSwitching: YES
+  configs:
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: -O
+targets:
+  MigoBenchMac:
+    type: application
+    platform: macOS
+    sources:
+      - Common
+      - Migo
+      - path: ../migo-shell/app/src/main/assets/game
+        type: folder
+        buildPhase: resources
+      - path: ../migo-shell/app/src/main/assets/game-endless-runner
+        type: folder
+        buildPhase: resources
+      - path: ../migo-shell/app/src/main/assets/game-canvasmark
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-idle
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-busy
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-mem
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Migo
+        product: MigoMacV8
+    postBuildScripts:
+      - name: Embed ANGLE
+        basedOnDependencyAnalysis: false
+        script: |
+          # The engine renders through ANGLE, which ships in the SDK as a pair of
+          # dylibs: copied next to the app's frameworks and signed with the app's
+          # identity. Xcode signs the app itself after this phase.
+          bash "$SRCROOT/sdk/Frameworks/Scripts/embed-apple-angle.sh" \
+            --frameworks-dir "$SRCROOT/sdk/Frameworks" \
+            --destination "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH" \
+            --architectures "$ARCHS" \
+            ${EXPANDED_CODE_SIGN_IDENTITY:+--sign "$EXPANDED_CODE_SIGN_IDENTITY"}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.migo.bench.mac.migo
+        CODE_SIGN_ENTITLEMENTS: Migo/MigoBench.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+  WebViewBenchMac:
+    type: application
+    platform: macOS
+    sources:
+      - Common
+      - WebView
+      - path: ../webview-shell/app/src/main/assets/game
+        type: folder
+        buildPhase: resources
+      - path: ../webview-shell/app/src/main/assets/game-endless-runner
+        type: folder
+        buildPhase: resources
+      - path: ../webview-shell/app/src/main/assets/game-canvasmark
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-idle
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-busy
+        type: folder
+        buildPhase: resources
+      - path: ../ios/calibration/calib-mem
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.migo.bench.mac.webview

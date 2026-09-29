@@ -63,6 +63,11 @@ final class MigoBenchViewController: BenchViewController {
             case .failed(let reason): Bench.report("failed: \(reason)")
             case .error(let code, let message, let recoverable):
                 Bench.report("error \(code) recoverable=\(recoverable): \(message)")
+            // WebKit's content process died and the view restarted the game in
+            // a new one: the cell then holds two sets of WebKit helpers and a
+            // game that started over. Said out loud, so the harness can name
+            // it rather than find an unexplained second set.
+            case .restarted: Bench.report("restarted: WebKit's content process died and the game started over")
             default: break
             }
         }

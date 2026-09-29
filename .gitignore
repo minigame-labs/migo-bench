@@ -12,6 +12,10 @@ out/*
 # And the C ABI A/B's rows, which RESULTS.md section 10 publishes a verdict from.
 # One file per session (capi-ab.sh names it by timestamp); the per-cell logs stay out.
 !out/capi_ab_*.csv
+# The Apple A/B drivers' rows, one file per session, for the same reason:
+# RESULTS.md publishes from them.
+!out/ios_ab_*.csv
+!out/macos_ab_*.csv
 **/build/
 **/.gradle/
 *.apk

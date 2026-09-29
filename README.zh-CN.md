@@ -51,7 +51,8 @@ Android 上的 **C ABI 宿主**(不写 Java)对 Java SDK,同一发布、同一�
 
 ```
 games/       game payloads (bunnymark Pixi/WebGL, endless-runner Phaser/WebGL, canvasmark Canvas2D)
-shells/      webview-shell + migo-shell  (symmetric minimal apps, each loads one game directly)
+shells/      webview-shell + migo-shell (Android, symmetric minimal apps, each loads one game directly);
+             ios (Performance+ vs WKWebView) and macos (V8 vs WKWebView), the Apple arms
 scripts/     lib.sh, capture-*.sh, run.sh, parse.py, compare.py, resolve-migo-aar.sh
 baselines/   pinned reference result rows (regression gate compares new runs against these)
 out/         results.csv + raw logs (gitignored except results.csv)
@@ -85,6 +86,22 @@ column -t -s, out/results.csv
 
 权威数据、设备 × 游戏矩阵,以及每一张逐指标数据表都在
 **[RESULTS.md](RESULTS.md)**(中文)/ **[RESULTS.en.md](RESULTS.en.md)** —— 这里不重复。
+
+### Apple:Migo 对 WKWebView(iOS 与 macOS)
+
+在装有 Xcode、XcodeGen 和已登录 `gh` 的 Mac 上运行。两个驱动脚本都会解析发布件 `migo-<v>-apple-sdk.zip`、
+构建两臂,并且先在已知代价的内容上证明测量本身是准的,再用它出数字(MEASURING.md §15)。结果见
+RESULTS §11(iOS)与 §12(macOS)。
+
+```bash
+# iOS —— iPhone 保持解锁,自动锁定设为「永不」
+bash scripts/ios-validate-measurement.sh --device <CoreDevice id> --udid <UDID> --version vX.Y.Z --team <TEAM>
+bash scripts/ios-ab.sh                   --device <CoreDevice id> --udid <UDID> --version vX.Y.Z --team <TEAM>
+# macOS —— 屏幕常亮、会话解锁、不跑别的;双显卡的 Mac 先固定一块 GPU
+sudo pmset -a gpuswitch 1          # 1 独显,0 核显;测完用 2 恢复
+bash scripts/macos-validate-measurement.sh --version vX.Y.Z
+bash scripts/macos-ab.sh                   --version vX.Y.Z
+```
 
 ### 压力场景 —— fps-vs-负载曲线(`--scenario stress`,仅 bunnymark)
 
