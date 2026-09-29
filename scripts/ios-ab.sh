@@ -194,6 +194,10 @@ cell() {  # <round> <arm> <game>; round 0 is the warm-up and is not recorded
     echo "[ios-ab] $arm/$game round $round: the app ended inside the window:" >&2
     tail -3 "$pfx.log" >&2; return 1
   fi
+  if grep -qs "\[bench\] restarted" "$pfx.log"; then
+    echo "[ios-ab] $arm/$game round $round: WebKit's content process died inside the cell and the game restarted" >&2
+    return 1
+  fi
   (( round > 0 )) || return 0
   export_table "$pfx.trace" "/trace-toc" "$pfx.toc.xml" || return 1
   for t in sysmon-process device-thermal-state-intervals; do
