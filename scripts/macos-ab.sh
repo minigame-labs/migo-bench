@@ -110,6 +110,7 @@ SESSION="$(date -u +%Y%m%dT%H%M%SZ)"
 CSV="$OUT/macos_ab_${SESSION}.csv"
 echo "round,arm,game,mac,macos,gpu,migo_version,fps_median,fps_min,cpu_pct,footprint_mb,cpu_limit_min,samples,processes,breakdown" > "$CSV"
 WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
 
 # Quit the bench apps and wait for the helpers they started (the pids given) to
 # go: a helper outlives its app by a moment, and one that stayed would sit in
@@ -260,7 +261,6 @@ for ((r = 1; r <= ROUNDS; r++)); do
   done
 done
 stop_ours || true
-rm -rf "$WORK"
 
 python3 - "$CSV" <<'PY'
 import csv, statistics, sys
