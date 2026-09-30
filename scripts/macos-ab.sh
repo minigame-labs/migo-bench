@@ -24,10 +24,12 @@
 # `[bench] measuring`; then for the window the harness reads every process's
 # CPU time at both ends (the arm's CPU is the difference over the wall time, in
 # percent of one core), samples its phys_footprint every 10 s (the median is
-# reported), and takes the game's own fps telemetry lines that arrived inside
-# it. Rounds interleave and alternate order (§3). A cell during which the CPU
-# was throttled (`pmset -g therm` CPU_Scheduler_Limit below 100) is kept in the
-# CSV and left out of the summary.
+# reported), and takes the game's own fps telemetry lines whose whole second lies
+# inside it (a line reports the second before its stamp; the first second after
+# `measuring` holds the app's own window capture, MEASURING §16). Rounds
+# interleave and alternate order (§3). A cell during which the CPU was throttled
+# (`pmset -g therm` CPU_Scheduler_Limit below 100) is kept in the CSV and left
+# out of the summary.
 #
 # The GPU must be pinned for the session (`sudo pmset -a gpuswitch 1` for the
 # discrete GPU, 0 for the integrated one) on a Mac that has two: both apps
@@ -235,7 +237,13 @@ fps = []
 for line in open(pfx + ".log"):
     stamp, _, text = line.partition(" ")
     m = re.search(r"fps=(\d+(?:\.\d+)?)", text)
-    if m and opened <= float(stamp) <= opened + (t1 - t0) + 2:
+    # An fps= line reports the second BEFORE its stamp. The app images its own window
+    # just before it prints measuring; that takes about 90 ms of the main thread, which
+    # the Migo arm display link shares. So the first line stamped inside the first second
+    # describes that capture, not the game: keep only lines whose whole second lies
+    # inside the window. No parentheses, quotes or backticks in this heredoc: bash 3.2
+    # misparses them inside a command substitution.
+    if m and opened + 1 <= float(stamp) <= opened + (t1 - t0) + 2:
         fps.append(float(m.group(1)))
 if not fps:
     sys.exit("no fps telemetry inside the window")
