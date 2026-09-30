@@ -398,6 +398,16 @@ controlled as a phone the harness owns:
   server -- composited pixels, so the Migo arm's `CAMetalLayer` is in them -- and
   a process may do that for its own windows without the screen-recording
   permission.
+- **The harness's own capture is not the game.** Imaging the window (above) holds
+  the app's main thread for ~90 ms, right before `measuring`. The Migo arm's display
+  link runs on that thread, so it misses ~5 ticks in that second (54-55 ticks, game
+  fps 54-55; every later second of every cell was 59-60 ticks, 60.00 Hz on average);
+  the WebView arm renders out of process and misses none. An `fps=` line reports the
+  second *before* its stamp, so the first line after `measuring` describes the
+  capture. `macos-ab.sh` therefore keeps only lines whose whole second lies inside the
+  window. The `fps_min` column of the sessions before this rule
+  (`out/macos_ab_20260929T*.csv`) includes that second and reads 54-58 for the Migo
+  arm; it is the capture, not steady-state pacing. The medians are unaffected.
 - **Calibrated like iOS** (§15): `scripts/macos-validate-measurement.sh` runs
   the same idle / 8 ms spin / 256 MiB content in both arms first.
 
