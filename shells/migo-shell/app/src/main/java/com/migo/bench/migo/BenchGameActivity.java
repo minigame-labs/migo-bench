@@ -101,10 +101,14 @@ public class BenchGameActivity extends MigoGameActivity {
         return builder.build();
     }
 
+    private final BenchPermissionHandler permissions = new BenchPermissionHandler(this);
+
     @Override
     protected void onSessionCreated(GameSession session) {
-        // Single-package game, no remote subpackages, no auth (bunnymark needs none).
+        // Single-package game, no remote subpackages.
         session.setSubpackageHandler(new BenchSubpackageHandler(session.getPaths().getCodeDir()));
+        // The scopes content asks for: granted, behind the Android permission a scope needs (BenchPermissionHandler).
+        session.setPermissionHandler(permissions);
         // Game-ready comes from the game, not from the engine. See the comment on
         // onGameReady below for why that distinction is the whole point.
         session.setGameLogHandler(logJson -> {
@@ -135,6 +139,13 @@ public class BenchGameActivity extends MigoGameActivity {
             Log.i(TAG, "game-ready from the game's first frame");
             reportFullyDrawn();
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissionNames, int[] grantResults) {
+        if (!permissions.onRequestPermissionsResult(requestCode, grantResults)) {
+            super.onRequestPermissionsResult(requestCode, permissionNames, grantResults);
+        }
     }
 
     @Override
