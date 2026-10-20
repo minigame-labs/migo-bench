@@ -174,7 +174,12 @@ public class BenchGameActivity extends MigoGameActivity {
                 Log.i(TAG, "onGameReady (engine-side; not the cold-start signal)");
             }
 
-            @Override public void onGameExit(int exitCode) { Log.i(TAG, "onGameExit " + exitCode); }
+            // A game that exits is closed, as any host closes it; the line is the one every conformance host prints
+            // when the exit reaches it.
+            @Override public void onGameExit(int exitCode) {
+                Log.i(TAG, "[host] exit requested (onGameExit " + exitCode + ")");
+                finish();
+            }
 
             @Override public void onError(MigoException exception) { Log.e(TAG, "onError: " + exception); }
 
