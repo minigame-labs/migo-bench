@@ -9,12 +9,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Locale;
 
@@ -37,7 +32,7 @@ final class BenchNetworkPolicy {
     private BenchNetworkPolicy() {}
 
     static void apply(Context context, String asset, RuntimeConfig.Builder builder) {
-        String json = readAsset(context, asset + "/network-policy.json");
+        String json = BenchAssets.readOptional(context, asset + "/network-policy.json");
         if (json == null) {
             return;
         }
@@ -93,22 +88,5 @@ final class BenchNetworkPolicy {
             }
         }
         throw new JSONException("no channel named \"" + key + "\"");
-    }
-
-    /** The asset's text, or null when the bundle has no such file. */
-    private static String readAsset(Context context, String path) {
-        try (InputStream in = context.getAssets().open(path)) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[4096];
-            int n;
-            while ((n = in.read(buf)) > 0) {
-                out.write(buf, 0, n);
-            }
-            return new String(out.toByteArray(), StandardCharsets.UTF_8);
-        } catch (FileNotFoundException e) {
-            return null;
-        } catch (IOException e) {
-            throw new IllegalStateException("cannot read " + path, e);
-        }
     }
 }

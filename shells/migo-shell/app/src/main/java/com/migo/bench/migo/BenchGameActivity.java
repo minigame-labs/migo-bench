@@ -98,8 +98,9 @@ public class BenchGameActivity extends MigoGameActivity {
             builder.setStartupOrientation(orientation);
             Log.i(TAG, "startup orientation from game.json: " + orientation);
         }
-        // The network the game's bundle says it needs, and none otherwise.
+        // The network the game's bundle says it needs, and none otherwise; and what it says it is launched with.
         BenchNetworkPolicy.apply(this, asset, builder);
+        BenchLaunchOptions.apply(this, asset, builder);
         return builder.build();
     }
 
