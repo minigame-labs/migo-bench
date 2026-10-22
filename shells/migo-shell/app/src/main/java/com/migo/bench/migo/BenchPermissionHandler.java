@@ -3,6 +3,7 @@ package com.migo.bench.migo;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.os.Build;
 
 import com.migo.runtime.callback.PermissionHandler;
 import com.migo.runtime.callback.PermissionSink;
@@ -13,9 +14,10 @@ import java.util.Map;
 /**
  * The shell's permission policy. It runs only content its own developers put in it -- the benchmark games and the
  * conformance suite -- so a scope that content asks for is granted, as a host that trusts what it runs would. A scope
- * that needs an Android runtime permission (location, the microphone, the camera) is granted only once Android has
- * granted that permission to the app, asked for here when it has not, and refused when Android refuses it: the SDK
- * reads the app's own permission when the game uses the capability, so a scope granted without it would fail anyway.
+ * that needs an Android runtime permission (location, the microphone, the camera, Bluetooth from Android 12 on) is
+ * granted only once Android has granted that permission to the app, asked for here when it has not, and refused when
+ * Android refuses it: the SDK reads the app's own permission when the game uses the capability, so a scope granted
+ * without it would fail anyway.
  */
 final class BenchPermissionHandler implements PermissionHandler {
 
@@ -27,6 +29,13 @@ final class BenchPermissionHandler implements PermissionHandler {
                 Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION});
         ANDROID_PERMISSIONS.put("scope.record", new String[] {Manifest.permission.RECORD_AUDIO});
         ANDROID_PERMISSIONS.put("scope.camera", new String[] {Manifest.permission.CAMERA});
+        // Android 12's "nearby devices", asked for together: connecting, scanning and advertising. Before it,
+        // Bluetooth's permissions are granted with the app.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ANDROID_PERMISSIONS.put("scope.bluetooth", new String[] {
+                    Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_ADVERTISE});
+        }
     }
 
     /** A scope request waiting for Android's answer to the permission dialog. */
