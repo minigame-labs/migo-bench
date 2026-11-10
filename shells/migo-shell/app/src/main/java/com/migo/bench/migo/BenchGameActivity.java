@@ -105,6 +105,7 @@ public class BenchGameActivity extends MigoGameActivity {
     }
 
     private final BenchPermissionHandler permissions = new BenchPermissionHandler(this);
+    private final BenchSettingHandler settings = new BenchSettingHandler(this, permissions);
 
     @Override
     protected void onSessionCreated(GameSession session) {
@@ -112,6 +113,8 @@ public class BenchGameActivity extends MigoGameActivity {
         session.setSubpackageHandler(new BenchSubpackageHandler(session.getPaths().getCodeDir()));
         // The scopes content asks for: granted, behind the Android permission a scope needs (BenchPermissionHandler).
         session.setPermissionHandler(permissions);
+        // openSetting: the app's page in Android's settings, where those permissions change (BenchSettingHandler).
+        session.setSettingHandler(settings);
         // Game-ready comes from the game, not from the engine. See the comment on
         // onGameReady below for why that distinction is the whole point.
         session.setGameLogHandler(logJson -> {
@@ -148,6 +151,13 @@ public class BenchGameActivity extends MigoGameActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissionNames, int[] grantResults) {
         if (!permissions.onRequestPermissionsResult(requestCode, grantResults)) {
             super.onRequestPermissionsResult(requestCode, permissionNames, grantResults);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (!settings.onActivityResult(requestCode)) {
+            super.onActivityResult(requestCode, resultCode, data);
         }
     }
 
