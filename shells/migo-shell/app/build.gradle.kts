@@ -25,4 +25,7 @@ android {
 
 dependencies {
     implementation(files("libs/migo.aar"))
+    // A file AAR brings none of the libraries the SDK uses (migo-runtime's
+    // contracts/android-runtime-dependencies.json): ZXing is scanCode's decoder.
+    implementation(libs.zxing.core)
 }
