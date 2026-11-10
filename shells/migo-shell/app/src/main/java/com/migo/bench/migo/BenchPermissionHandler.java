@@ -9,6 +9,7 @@ import com.migo.runtime.callback.PermissionHandler;
 import com.migo.runtime.callback.PermissionSink;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -18,6 +19,10 @@ import java.util.Map;
  * granted only once Android has granted that permission to the app, asked for here when it has not, and refused when
  * Android refuses it: the SDK reads the app's own permission when the game uses the capability, so a scope granted
  * without it would fail anyway.
+ * <p>
+ * The player changes those permissions on the app's page in Android's settings, which is where the shell's openSetting
+ * sends them (BenchSettingHandler): {@link #reread} reads the permissions again when they come back and records what a
+ * change there decided.
  */
 final class BenchPermissionHandler implements PermissionHandler {
 
@@ -54,6 +59,10 @@ final class BenchPermissionHandler implements PermissionHandler {
     private final Activity activity;
     private final Map<Integer, Pending> pending = new HashMap<>();
     private int nextRequestCode = 0x4d00;
+    /** Every scope decided in this session, as it now stands, in the order content first asked about it. */
+    private final Map<String, Boolean> decided = new LinkedHashMap<>();
+    /** The session's sink, as the SDK hands it with each request: the standing decisions are the session's. */
+    private PermissionSink standing;
 
     BenchPermissionHandler(Activity activity) {
         this.activity = activity;
@@ -96,9 +105,38 @@ final class BenchPermissionHandler implements PermissionHandler {
     }
 
     /** Record the standing decision first, then settle the request, as the sink's contract asks. */
-    private static void decide(String scope, PermissionSink sink, int requestId, boolean granted) {
+    private void decide(String scope, PermissionSink sink, int requestId, boolean granted) {
+        synchronized (decided) {
+            decided.put(scope, granted);
+            standing = sink;
+        }
         sink.setScope(scope, granted);
         sink.resolveRequest(requestId, granted);
+    }
+
+    /**
+     * The decided scopes once the player is back from Android's settings: a scope behind a permission stands as
+     * Android now holds it -- one revoked there is refused from now on -- and the rest as they were decided.
+     */
+    Map<String, Boolean> reread() {
+        Map<String, Boolean> changed = new LinkedHashMap<>();
+        Map<String, Boolean> now;
+        PermissionSink sink;
+        synchronized (decided) {
+            for (Map.Entry<String, Boolean> scope : decided.entrySet()) {
+                String[] needed = ANDROID_PERMISSIONS.get(scope.getKey());
+                if (needed == null) continue;
+                boolean granted = anyGranted(needed);
+                if (granted != scope.getValue()) changed.put(scope.getKey(), granted);
+            }
+            decided.putAll(changed);
+            now = new LinkedHashMap<>(decided);
+            sink = standing;
+        }
+        if (sink != null) {
+            for (Map.Entry<String, Boolean> scope : changed.entrySet()) sink.setScope(scope.getKey(), scope.getValue());
+        }
+        return now;
     }
 
     /** Any one of a scope's alternatives is enough: coarse location is location. */
