@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 可复现的 **Migo vs Android 系统 WebView** 基准测试——同一游戏、同一设备、
-同一交互脚本,在两种运行时上分别运行。这是 Migo「开源原生运行时,替代 WebView」定位背后的证据。
+同一交互脚本,在两种运行时上分别运行。这是 Migo「替代 WebView 的原生运行时」定位背后的证据。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
@@ -29,7 +29,7 @@ Android 上的 **C ABI 宿主**(不写 Java)对 Java SDK,同一发布、同一�
 ## 测什么(以及诚实的权重取舍)
 
 - **头条指标 —— 一致性与可审计性 + 内存。** Migo 只打包一套运行时 → 所有设备行为一致;
-  WebView 则随 OEM/系统/版本漂移。Migo 开源、可钉版本、可自行修复;WebView 是一个
+  WebView 则随 OEM/系统/版本漂移。Migo 随 App 打包、版本由宿主钉定;WebView 是一个
   脱离你控制、异步更新的黑盒。内存占用有可测量的下降。
 - **支撑指标 —— 效率。** 冷启动(游戏就绪)、PSS 内存、CPU、能耗、体积。
 - **诚实披露 —— 吞吐量。** fps 通常打平;从不作为主打指标。fps 是 Migo 的*可控*
