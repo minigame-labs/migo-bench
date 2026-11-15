@@ -7,7 +7,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
-  <img alt="Migo vs Android System WebView across three games (v0.9.9, Mate30 Pro): memory 44-54% lower, CPU 2.4-3.0x lower, game-ready faster on two of three with the third inside run-to-run noise; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+  <img alt="Migo vs Android System WebView across three games (v0.9.19, Mate30 Pro): memory 47-58% lower, CPU 2.3-3.0x lower, first frame faster on two games and game-ready on one, the other startup readings inside run-to-run noise; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
 </picture>
 
 <sub>Mate30 Pro · release 构建 · 3 款游戏(Pixi/WebGL、Phaser/WebGL、Canvas2D)· 每根柱子都可溯源到一个钉死的 Migo 版本。完整逐指标数据表 → **[RESULTS.md](RESULTS.md)**(中文)/ **[RESULTS.en.md](RESULTS.en.md)**。</sub>
@@ -22,8 +22,8 @@
 
 **[RESULTS.md(中文,默认)](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** ——
 设备 × 游戏矩阵 + 逐指标数据表(内存、启动、fps + 压力曲线、CPU、能耗)。
-Mate30 Pro 上对可下载的 v0.9.9 发布件的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),每一格测量前都证明了画面在渲染:**内存 Migo 少 44–54% · CPU 少 2.4–3.0× · 三款游戏首帧快 17–36% · bunnymark 与 canvasmark 可玩快 24% 与 13% · fps 打平(两侧中位数都是 60,1% 低帧 59 vs 60)。** endless-runner 的可玩这一场读到慢 11%,区间重叠;这一格场次间漂 ±100 ms,快慢都不引用 —— 先看 §1。
-Android 上的 **C ABI 宿主**(不写 Java)对 Java SDK,同一发布、同一场次:fps、CPU、内存均无实质回退 —— 见 RESULTS §10。
+Mate30 Pro 上对可下载的 v0.9.19 发布件的结论摘要,**三款游戏结果高度一致**(bunnymark/Pixi、endless-runner/Phaser、canvasmark/Canvas2D),每一格测量前都证明了画面在渲染:**内存 Migo 少 47–58% · CPU 少 2.3–3.0×(CPU 周期少 3.9–4.7×)· bunnymark 与 canvasmark 首帧快 35–36% · bunnymark 可玩快 22% · fps 打平(两侧中位数都是 60,1% 低帧 59 vs 60)。** 其余三项启动读数(endless-runner 首帧与可玩、canvasmark 可玩)在场次噪声内,不引用 —— 先看 §1。
+Android 上的 **C ABI 宿主**(不写 Java)对 Java SDK,同一发布、同一场次(v0.9.9):fps、CPU、内存均无实质回退 —— 见 RESULTS §10。
 ✅ **重载扩展性依然稳健** —— 压测到 22 万个精灵(远超任何真实小游戏的常规负载):两侧拐点都在 4 万,整条曲线逐档持平或 Migo 高 1 fps。本行早先版本还写过"Migo 运行更凉",2026-08-23 复现不出来,已撤回 —— 详见 RESULTS §4。
 
 ## 测什么(以及诚实的权重取舍)
