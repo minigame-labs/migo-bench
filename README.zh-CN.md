@@ -12,7 +12,7 @@
 
 <sub>Mate30 Pro · release 构建 · 3 款游戏(Pixi/WebGL、Phaser/WebGL、Canvas2D)· 每根柱子都可溯源到一个钉死的 Migo 版本。完整逐指标数据表 → **[RESULTS.md](RESULTS.md)**(中文)/ **[RESULTS.en.md](RESULTS.en.md)**。</sub>
 
-> **状态 —— Migo 尚处 pre-1.0,持续迭代发布中。** 自 v0.9.0 起,每个版本都发布了可运行、带认证的 AAR —— 用 `--migo-aar release-tag:v0.9.9`(或 [minigame-labs/migo/releases](https://github.com/minigame-labs/migo/releases) 中任意 tag)即可自行复现每一个数字。本仓库就是这些数字背后公开、可审计的证据链。
+> **状态 —— Migo 尚处 pre-1.0,持续迭代发布中。** 自 v0.9.19 起,每个版本都在 [minigame-labs/migo-runtime/releases](https://github.com/minigame-labs/migo-runtime/releases) 发布可运行、带认证的 AAR —— 用 `--migo-aar release-tag:v0.9.19` 即可自行复现。用更早版本测得的表格注明了所用版本,那些 AAR 已不再公开发布。本仓库就是这些数字背后公开、可审计的证据链。
 
 > 本仓库兼具两个身份:**展示窗口**(采纳者/怀疑者都能自行重跑)与**回归测试框架**
 > (每一次 Migo 的优化/修复,都用同一套对比重新跑一遍,对照基线)。
