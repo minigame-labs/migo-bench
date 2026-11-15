@@ -3,8 +3,8 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 Reproducible **Migo vs Android System WebView** benchmarks — the same game, same device,
-same interaction script, on both runtimes. The evidence behind Migo's "open-source native
-runtime that replaces the WebView" positioning.
+same interaction script, on both runtimes. The evidence behind Migo's positioning as the native
+runtime that replaces the WebView.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">

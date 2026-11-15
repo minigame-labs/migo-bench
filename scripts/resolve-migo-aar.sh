@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # resolve-migo-aar.sh <spec> <dest.aar>
 #   spec = local:PATH        copy a locally-built AAR
-#        | release-tag:TAG   gh release download from minigame-labs/migo
+#        | release-tag:TAG   gh release download from minigame-labs/migo-runtime
 #        | sha:SHA           checkout that migo commit + build-aar.sh, ONCE
 # Writes <dest.aar> and prints the resolved migo_version to stdout.
 #
@@ -47,7 +47,7 @@ case "$spec" in
     # nothing to select by device ABI any more. A bare '*.aar' pattern would
     # still be ambiguous: match the trailing "-android.aar" segment
     # specifically, and exclude its sidecar attestation file.
-    gh release download "$tag" -R minigame-labs/migo -p '*-android.aar' -O "$dest" --clobber
+    gh release download "$tag" -R minigame-labs/migo-runtime -p '*-android.aar' -O "$dest" --clobber
     echo "$tag"
     ;;
   sha:*)
