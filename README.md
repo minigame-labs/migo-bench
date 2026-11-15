@@ -8,7 +8,7 @@ runtime that replaces the WebView.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/headline-dark.svg">
-  <img alt="Migo vs Android System WebView across three games (v0.9.9, Mate30 Pro): memory 44-54% lower, CPU 2.4-3.0x lower, game-ready faster on two of three with the third inside run-to-run noise; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
+  <img alt="Migo vs Android System WebView across three games (v0.9.19, Mate30 Pro): memory 47-58% lower, CPU 2.3-3.0x lower, first frame faster on two games and game-ready on one, the other startup readings inside run-to-run noise; full data in RESULTS.md" src="assets/headline-light.svg" width="100%">
 </picture>
 
 <sub>Mate30 Pro · release build · 3 games (Pixi/WebGL, Phaser/WebGL, Canvas2D) · every bar traces to a pinned Migo version. Full per-metric tables → **[RESULTS.md](RESULTS.md)** (中文) / **[RESULTS.en.md](RESULTS.en.md)**.</sub>
@@ -23,8 +23,8 @@ runtime that replaces the WebView.
 
 **[RESULTS.md（中文,默认）](RESULTS.md)** · **[RESULTS.en.md (English)](RESULTS.en.md)** —
 device × game matrix + per-metric tables (memory, startup, fps + stress curve, CPU, energy).
-TL;DR on Mate30 Pro against the downloadable v0.9.9 release, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), every cell proved to be rendering before it was measured: **memory Migo 44–54% less · CPU 2.4–3.0× less · first frame 17–36% faster on all three · game-ready 24% and 13% faster on bunnymark and canvasmark · fps a tie (60 median both sides; 1% low 59 vs 60).** endless-runner game-ready read 11% slower this session with overlapping ranges; that cell drifts ±100 ms between sessions and is not quoted either way — read §1.
-The Android **C ABI host** (no Java) against the Java SDK, same release and session: no material regression in fps, CPU or memory — RESULTS §10.
+TL;DR on Mate30 Pro against the downloadable v0.9.19 release, **consistent across all three games** (bunnymark Pixi, endless-runner Phaser, canvasmark Canvas2D), every cell proved to be rendering before it was measured: **memory Migo 47–58% less · CPU 2.3–3.0× less (3.9–4.7× fewer CPU cycles) · first frame 35–36% faster on bunnymark and canvasmark · game-ready 22% faster on bunnymark · fps a tie (60 median both sides; 1% low 59 vs 60).** The other three startup readings (endless-runner first frame and game-ready, canvasmark game-ready) are inside run-to-run noise and are not quoted — read §1.
+The Android **C ABI host** (no Java) against the Java SDK, same release and session (v0.9.9): no material regression in fps, CPU or memory — RESULTS §10.
 ✅ **Heavy-load scaling holds up** — stress-tested to 220k sprites (far past any real mini-game's normal load): the knee is at 40,000 sprites on both sides and the curve is level or 1 fps in Migo's favour the whole way. An earlier version of this line also claimed Migo ran cooler; that did not reproduce on 2026-08-23 and has been withdrawn — see RESULTS §4.
 
 **[JITLESS.md](JITLESS.md)** — what a V8 that cannot generate code costs, measured on
