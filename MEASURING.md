@@ -125,6 +125,14 @@ RESULTS.md is gated to ≤34 °C.
 The gate must have a **timeout that reports itself**. A silent "waited forever
 then proceeded" turns a gated run into an ungated one that still looks gated.
 
+The gate is two conditions, both read from the device: the SoC at or under 35 °C,
+and nothing holding the big cluster down. The second is cpu7's `scaling_max_freq`
+back at 2861 MHz, and the device decides who may read that file: on 2026-11-18 the
+Mate 30 Pro's own services made it `0660 system:system`, and every row then timed
+out on a phone at 22 °C. Where the file cannot be read, the platform's throttling
+verdict (`dumpsys thermalservice`, Thermal Status 0) answers instead, and the gate
+line records which of the two decided (`max=2861000`, or `max=unreadable thermal=0`).
+
 ## 4b. Know what this harness can resolve, before quoting a difference.
 
 Everything above is about not fooling yourself with a *wrong* number. This one is

@@ -120,19 +120,39 @@ _gate_quiesce() {
   done
 }
 
+# The cap is cpu7's scaling_max_freq, and the device decides who may read it. On 2026-11-18 the Mate 30 Pro's own
+# services took it to 0660 system:system -- the shell had read it on 2026-11-16 -- and from then on every row timed
+# out: a cap nobody can read was treated as a cap held down, so a phone at 22 C waited 420 s per cell and recorded
+# PROCEEDED-UNGATED. Where the file cannot be read, the framework's own throttling verdict decides instead:
+# `dumpsys thermalservice`'s Thermal Status, where 0 (NONE) means the platform asks nothing to throttle. The gate line
+# names the signal that decided (max=<kHz>, or max=unreadable thermal=<status>), so a row gated one way can always be
+# told from a row gated the other.
+_gate_thermal_status() {
+  "${ADB[@]}" shell dumpsys thermalservice 2>/dev/null | tr -d '\r' | sed -n 's/^Thermal Status: //p' | head -1
+}
+
 cold_gate() {  # <label> -> prints the outcome, never fails the run
-  local label="${1:-}" start soc mx waited
+  local label="${1:-}" start soc mx waited cap unthrottled status
   _gate_quiesce
   start=$(date +%s)
   while true; do
     soc=$(_gate_read_int /sys/class/thermal/thermal_zone0/temp)
     mx=$(_gate_read_int /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq)
     waited=$(( $(date +%s) - start ))
-    if [ "${soc:-99999}" -le 35000 ] && [ "${mx:-0}" -ge 2861000 ]; then
-      echo "cold soc=${soc}mC max=${mx} waited=${waited}s"; return 0
+    case "$mx" in
+      ''|*[!0-9]*)
+        status=$(_gate_thermal_status)
+        cap="max=unreadable thermal=${status:-unknown}"
+        if [ "${status:-}" = 0 ]; then unthrottled=1; else unthrottled=0; fi ;;
+      *)
+        cap="max=${mx}"
+        if [ "$mx" -ge 2861000 ]; then unthrottled=1; else unthrottled=0; fi ;;
+    esac
+    if [ "${soc:-99999}" -le 35000 ] && [ "$unthrottled" = 1 ]; then
+      echo "cold soc=${soc}mC ${cap} waited=${waited}s"; return 0
     fi
     if [ "$waited" -ge 420 ]; then
-      echo "TIMEOUT waited=${waited}s soc=${soc}mC max=${mx} PROCEEDED-UNGATED"; return 0
+      echo "TIMEOUT waited=${waited}s soc=${soc}mC ${cap} PROCEEDED-UNGATED"; return 0
     fi
     sleep 5
   done
