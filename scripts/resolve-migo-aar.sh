@@ -27,6 +27,14 @@
 # other downloads fixed bytes. Caching the built artifact makes `sha:` behave
 # the same way. The cache is keyed by the commit, which is immutable, and is
 # only ever written after a successful release build by this script.
+#
+# `release-tag:` is cached too, for a plainer reason: it downloaded the AAR again
+# before every migo run, ten times for one matrix, the same ~20 MB each time. The
+# cached file is used only while it is the bytes the release publishes: the
+# release's SHA256SUMS.txt (a few hundred bytes) is fetched on every call and the
+# cached AAR held to the digest it names, so a replaced asset is downloaded again
+# and a corrupt one is never staged. A cache can be seeded with a copy of the
+# release AAR from anywhere -- it is checked the same way.
 set -eu
 spec="${1:?usage: resolve-migo-aar.sh <spec> <dest.aar>}"
 dest="${2:?usage: resolve-migo-aar.sh <spec> <dest.aar>}"
@@ -47,7 +55,30 @@ case "$spec" in
     # nothing to select by device ABI any more. A bare '*.aar' pattern would
     # still be ambiguous: match the trailing "-android.aar" segment
     # specifically, and exclude its sidecar attestation file.
-    gh release download "$tag" -R minigame-labs/migo-runtime -p '*-android.aar' -O "$dest" --clobber
+    cache="$(cd "$(dirname "$0")/.." && pwd)/out/aar-cache"
+    mkdir -p "$cache"
+    sha256() { python3 -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"; }
+    sums="$(gh release download "$tag" -R minigame-labs/migo-runtime -p SHA256SUMS.txt -O - 2>/dev/null || true)"
+    line="$(printf '%s\n' "$sums" | grep -E '^[0-9a-f]{64}  migo-[^ ]+-android\.aar$' | head -1 || true)"
+    if [ -n "$line" ]; then
+      want="${line%%  *}"; name="${line##*  }"; cached="$cache/$name"
+      if [ ! -f "$cached" ] || [ "$(sha256 "$cached")" != "$want" ]; then
+        gh release download "$tag" -R minigame-labs/migo-runtime -p "$name" -O "$cached.part" --clobber >&2
+        got="$(sha256 "$cached.part")"
+        if [ "$got" != "$want" ]; then
+          rm -f "$cached.part"
+          echo "ERROR: $name from $tag is $got, but the release's SHA256SUMS.txt says $want" >&2
+          exit 1
+        fi
+        mv -f "$cached.part" "$cached"
+      else
+        echo "[resolve] reusing $name ($cached), which is the $tag release's bytes" >&2
+      fi
+      cp "$cached" "$dest"
+    else
+      # A release with no SHA256SUMS.txt: nothing to hold a cached copy to, so download it as before.
+      gh release download "$tag" -R minigame-labs/migo-runtime -p '*-android.aar' -O "$dest" --clobber >&2
+    fi
     echo "$tag"
     ;;
   sha:*)
