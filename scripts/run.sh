@@ -4,22 +4,23 @@
 #
 #   run.sh --runtime webview|migo|capi --game bunnymark --device SERIAL \
 #          [--scenario steady] [--duration 60] [--cold-runs 3] \
-#          [--migo-aar local:PATH|release-tag:TAG|sha:SHA]   (required for migo)
+#          [--migo-aar local:PATH|release-tag:TAG|sha:SHA]   (required for migo) \
+#          [--out DIR]   (defaults to out/; results.csv there is appended to)
 #   capi reads its APK from CAPI_APK and its version from CAPI_VERSION.
 set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-RUNTIME=""; GAME=bunnymark; DEVICE=""; SCEN=steady; DUR=60; COLD=3; MIGO_AAR=""
+RUNTIME=""; GAME=bunnymark; DEVICE=""; SCEN=steady; DUR=60; COLD=3; MIGO_AAR=""; OUT="$DIR/../out"
 while [[ $# -gt 0 ]]; do case "$1" in
   --runtime) RUNTIME="$2"; shift 2;; --game) GAME="$2"; shift 2;;
   --device) DEVICE="$2"; shift 2;; --scenario) SCEN="$2"; shift 2;;
   --duration) DUR="$2"; shift 2;; --cold-runs) COLD="$2"; shift 2;;
-  --migo-aar) MIGO_AAR="$2"; shift 2;;
+  --migo-aar) MIGO_AAR="$2"; shift 2;; --out) OUT="$2"; shift 2;;
   *) echo "unknown arg: $1" >&2; exit 2;; esac; done
 [[ -n "$RUNTIME" ]] || { echo "ERROR: --runtime required" >&2; exit 2; }
 
 export SERIAL="$DEVICE"
-OUT="$DIR/../out"; mkdir -p "$OUT"
+mkdir -p "$OUT"
 LABEL="${GAME}_${RUNTIME}"
 migo_ver="n/a"
 
