@@ -438,3 +438,24 @@ controlled as a phone the harness owns:
    heard — not inferred from "AudioThread started".
 10. `RESULTS.md` + `RESULTS.en.md` + both READMEs + headline SVGs + `migo-www`
     updated together, and anything withdrawn is said to be withdrawn.
+
+## A side-by-side video, and what it may be used to say
+
+`scripts/make-comparison-assets.sh` puts one game into both shells (the web adapter in front of it for Migo, a page
+that gives it the same CSS-pixel canvas for the WebView). `scripts/record-comparison.sh` records the two arms one
+after the other with scrcpy, after the same cold gate, with taps at one fixed interval, and samples each second what
+the rest of this harness measures: frames actually presented (SurfaceFlinger's present times for the game's layer) and
+PSS including the WebView's renderer. `scripts/compose-comparison.py` puts the two recordings side by side with those
+samples on them and the method written underneath. Everything on screen is a sample, at the second it was taken.
+
+```sh
+bash scripts/make-comparison-assets.sh hurdle-run-1.zip ../migo-web-adapter/dist/migo-web-adapter.bundle.js game-hurdle
+# rebuild and install both shells, then:
+bash scripts/record-comparison.sh --device <serial> --game-asset game-hurdle --seconds 30
+python3 scripts/compose-comparison.py --title "Hurdle Run (Egret 5.4.1)"    # needs ffmpeg with libass
+```
+
+A video is one game on one device. On 2026-11-19 the demo catalog's Egret game (Hurdle Run) ran at 59-61 fps and
+125-135 MB on Migo and at 41-45 fps and 186-200 MB on the WebView of a Mate 30 Pro, the WebView's frame rate the same
+with no recording running. That frame rate is this game's on this WebView, not a property of JavaScript on either:
+the steady-state tables, which hold the frame rate tied, are what a general claim rests on.
