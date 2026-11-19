@@ -7,60 +7,60 @@
 <text x="818" y="30" font-size="12.5" font-weight="600" fill="#ffffff">Migo</text>
 <text x="24.0" y="84" font-size="15" font-weight="700" fill="#ffffff">Memory</text>
 <text x="309" y="84" font-size="11.5" text-anchor="end" fill="#898781">MB PSS</text>
-<text x="24.0" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo 47%-58% less</text>
+<text x="24.0" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo 45%-56% less</text>
 <line x1="24.0" y1="354" x2="309.3333333333333" y2="354" stroke="#383835" stroke-width="1"/>
-<rect x="43.6" y="230.4" width="26" height="123.6" rx="4" fill="#8f8d86"/>
-<text x="56.6" y="224.4" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">251</text>
-<rect x="73.6" y="293.9" width="26" height="60.1" rx="4" fill="#3987e5"/>
-<text x="86.6" y="287.9" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">122</text>
+<rect x="43.6" y="239.3" width="26" height="114.7" rx="4" fill="#8f8d86"/>
+<text x="56.6" y="233.3" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">207</text>
+<rect x="73.6" y="293.1" width="26" height="60.9" rx="4" fill="#3987e5"/>
+<text x="86.6" y="287.1" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">110</text>
 <text x="71.6" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
 <rect x="138.7" y="154.0" width="26" height="200.0" rx="4" fill="#8f8d86"/>
-<text x="151.7" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">406</text>
-<rect x="168.7" y="248.1" width="26" height="105.9" rx="4" fill="#3987e5"/>
-<text x="181.7" y="242.1" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">215</text>
+<text x="151.7" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">361</text>
+<rect x="168.7" y="243.2" width="26" height="110.8" rx="4" fill="#3987e5"/>
+<text x="181.7" y="237.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">200</text>
 <text x="166.7" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
-<rect x="233.8" y="236.8" width="26" height="117.2" rx="4" fill="#8f8d86"/>
-<text x="246.8" y="230.8" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">238</text>
-<rect x="263.8" y="304.2" width="26" height="49.8" rx="4" fill="#3987e5"/>
-<text x="276.8" y="298.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">101</text>
+<rect x="233.8" y="243.2" width="26" height="110.8" rx="4" fill="#8f8d86"/>
+<text x="246.8" y="237.2" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">200</text>
+<rect x="263.8" y="305.2" width="26" height="48.8" rx="4" fill="#3987e5"/>
+<text x="276.8" y="299.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">88</text>
 <text x="261.8" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
 <text x="337.3333333333333" y="84" font-size="15" font-weight="700" fill="#ffffff">CPU</text>
 <text x="623" y="84" font-size="11.5" text-anchor="end" fill="#898781">% multi-core</text>
-<text x="337.3333333333333" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo 2.3-3.0x less</text>
+<text x="337.3333333333333" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo 2.4-2.9x less</text>
 <line x1="337.3333333333333" y1="354" x2="622.6666666666666" y2="354" stroke="#383835" stroke-width="1"/>
-<rect x="356.9" y="214.4" width="26" height="139.6" rx="4" fill="#8f8d86"/>
-<text x="369.9" y="208.4" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">127</text>
-<rect x="386.9" y="303.5" width="26" height="50.5" rx="4" fill="#3987e5"/>
-<text x="399.9" y="297.5" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">46</text>
+<rect x="356.9" y="207.6" width="26" height="146.4" rx="4" fill="#8f8d86"/>
+<text x="369.9" y="201.6" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">131</text>
+<rect x="386.9" y="300.4" width="26" height="53.6" rx="4" fill="#3987e5"/>
+<text x="399.9" y="294.4" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">48</text>
 <text x="384.9" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
-<rect x="452.0" y="208.9" width="26" height="145.1" rx="4" fill="#8f8d86"/>
-<text x="465.0" y="202.9" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">132</text>
-<rect x="482.0" y="305.6" width="26" height="48.4" rx="4" fill="#3987e5"/>
-<text x="495.0" y="299.6" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">44</text>
+<rect x="452.0" y="208.7" width="26" height="145.3" rx="4" fill="#8f8d86"/>
+<text x="465.0" y="202.7" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">130</text>
+<rect x="482.0" y="303.7" width="26" height="50.3" rx="4" fill="#3987e5"/>
+<text x="495.0" y="297.7" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">45</text>
 <text x="480.0" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
 <rect x="547.1" y="154.0" width="26" height="200.0" rx="4" fill="#8f8d86"/>
-<text x="560.1" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">182</text>
-<rect x="577.1" y="267.2" width="26" height="86.8" rx="4" fill="#3987e5"/>
-<text x="590.1" y="261.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">79</text>
+<text x="560.1" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">179</text>
+<rect x="577.1" y="270.2" width="26" height="83.8" rx="4" fill="#3987e5"/>
+<text x="590.1" y="264.2" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">75</text>
 <text x="575.1" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
 <text x="650.6666666666666" y="84" font-size="15" font-weight="700" fill="#ffffff">Startup</text>
 <text x="936" y="84" font-size="11.5" text-anchor="end" fill="#898781">ms to game-ready</text>
 <text x="650.6666666666666" y="103" font-size="12.5" font-weight="700" fill="#3987e5">Migo faster on 3 of 3</text>
 <line x1="650.6666666666666" y1="354" x2="936.0" y2="354" stroke="#383835" stroke-width="1"/>
-<rect x="670.2" y="192.0" width="26" height="162.0" rx="4" fill="#8f8d86"/>
-<text x="683.2" y="186.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">525</text>
-<rect x="700.2" y="228.4" width="26" height="125.6" rx="4" fill="#3987e5"/>
-<text x="713.2" y="222.4" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">407</text>
+<rect x="670.2" y="197.9" width="26" height="156.1" rx="4" fill="#8f8d86"/>
+<text x="683.2" y="191.9" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">519</text>
+<rect x="700.2" y="234.6" width="26" height="119.4" rx="4" fill="#3987e5"/>
+<text x="713.2" y="228.6" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">397</text>
 <text x="698.2" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Bunnymark</text>
 <rect x="765.3" y="154.0" width="26" height="200.0" rx="4" fill="#8f8d86"/>
-<text x="778.3" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">648</text>
-<rect x="795.3" y="156.8" width="26" height="197.2" rx="4" fill="#3987e5"/>
-<text x="808.3" y="150.8" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">639</text>
+<text x="778.3" y="148.0" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">665</text>
+<rect x="795.3" y="194.3" width="26" height="159.7" rx="4" fill="#3987e5"/>
+<text x="808.3" y="188.3" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">531</text>
 <text x="793.3" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Endless</text>
-<rect x="860.4" y="237.6" width="26" height="116.4" rx="4" fill="#8f8d86"/>
-<text x="873.4" y="231.6" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">377</text>
-<rect x="890.4" y="249.7" width="26" height="104.3" rx="4" fill="#3987e5"/>
-<text x="903.4" y="243.7" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">338</text>
+<rect x="860.4" y="244.8" width="26" height="109.2" rx="4" fill="#8f8d86"/>
+<text x="873.4" y="238.8" font-size="12" font-weight="400" text-anchor="middle" fill="#c3c2b7">363</text>
+<rect x="890.4" y="255.4" width="26" height="98.6" rx="4" fill="#3987e5"/>
+<text x="903.4" y="249.4" font-size="12" font-weight="700" text-anchor="middle" fill="#3987e5">328</text>
 <text x="888.4" y="374.0" font-size="12" text-anchor="middle" fill="#c3c2b7">Canvasmark</text>
-<text x="24" y="394" font-size="11" fill="#898781">Median fps 60 on both sides; Endless game-ready is inside run-to-run noise. Session 2026-11-15 - see RESULTS.</text>
+<text x="24" y="394" font-size="11" fill="#898781">Median fps 60 on both sides; Endless game-ready is inside run-to-run noise. Session 2026-11-19 - see RESULTS.</text>
 </svg>
