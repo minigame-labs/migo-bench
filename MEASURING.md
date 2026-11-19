@@ -239,6 +239,17 @@ paid — a harness artifact charged to the runtime.
 > **Rule.** Whenever one side has a step the other does not, either remove it or
 > state it in the results. "It's just the demo app" is how it gets published.
 
+It happened again the other way round, and for longer. The WebView shell set
+`LAYER_TYPE_HARDWARE` on its WebView from the start (2026-07), so that `dumpsys
+gfxinfo` would see its frames. That made every WebView frame render into an
+offscreen layer and be composited a second time: a full-screen texture and a pass
+that a WebView in an ordinary app does not have. Nothing has read gfxinfo since
+fps moved to SurfaceFlinger's present times, but the layer stayed, and every table
+up to and including the 2026-11-15 session charged it to the WebView: 24 MB of PSS
+on bunnymark and on endless-runner and about 6 points of CPU, at the same 60 fps
+(Mate 30 Pro, 2026-11-19, back-to-back 30 s runs with and without it). Removed;
+the sessions measured with it overstate Migo's memory advantage by that much.
+
 ## 8. Run the configuration you ship.
 
 Migo was benchmarked with `setDebugEnabled(true)`, which registers a console ring

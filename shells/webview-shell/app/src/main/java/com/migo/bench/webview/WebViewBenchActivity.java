@@ -90,9 +90,15 @@ public class WebViewBenchActivity extends Activity {
         // onGameReady (the fair startup number; "Displayed" fires on the blank window).
         webView.addJavascriptInterface(new BenchBridge(), "AndroidBench");
 
-        // Layer type HARDWARE: ensure the WebView composites on the GPU so
-        // dumpsys gfxinfo sees real frame timing (matches Migo's GPU path).
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // No layer type. A WebView in an ordinary app has none: it draws straight
+        // into the window. This shell used to set LAYER_TYPE_HARDWARE so that
+        // `dumpsys gfxinfo` would see its frames, which made every frame render
+        // into an offscreen layer and be composited again -- a full-screen texture
+        // and a pass no app pays. Measured on the Mate 30 Pro (2026-11-19, one
+        // session, 30 s runs): 24 MB of PSS on bunnymark (225 -> 201 MB) and on
+        // endless-runner (380 -> 357 MB), and 6 points of CPU, at the same 60 fps.
+        // fps comes from SurfaceFlinger's present times (lib.sh capture_fps), so
+        // nothing reads gfxinfo any more.
 
         webView.loadUrl("file:///android_asset/" + asset + "/index.html");
     }
