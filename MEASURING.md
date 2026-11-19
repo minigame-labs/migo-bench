@@ -470,3 +470,14 @@ A video is one game on one device. On 2026-11-19 the demo catalog's Egret game (
 125-135 MB on Migo and at 41-45 fps and 186-200 MB on the WebView of a Mate 30 Pro, the WebView's frame rate the same
 with no recording running. That frame rate is this game's on this WebView, not a property of JavaScript on either:
 the steady-state tables, which hold the frame rate tied, are what a general claim rests on.
+
+What the WebView's 42 is made of was measured the same day, and it is not script. Hooked into the game's own
+ticker over the WebView's DevTools protocol (`egret.ticker.update` wrapped, 8 s, the same taps), the WebView ran
+the game's frame **60 times a second** (interval median 16.5 ms, 482 frames) and each frame's update took **0.9 ms**
+(p90 2 ms) -- while SurfaceFlinger presented 42 of them. A 3 s Chromium trace of the same page had no thread near
+full: the renderer's main thread ~250 ms/s, the compositor ~270 ms/s, the in-process GPU thread ~120 ms/s, and the
+app's RenderThread ~190 ms/s in `DrawFn_DrawGL` (about 4.5 ms a presented frame). So the frames are produced and
+then lost between the WebView's threads on their way to the screen. Two things it is not: the per-frame score
+text (removing its update leaves the WebView at 42) and the hardware layer this shell used to set (§7; 42 without
+it too). The video therefore shows a difference in how each side gets this game's frames onto the screen, and may
+be captioned that way -- never as faster JavaScript, which these numbers contradict.
