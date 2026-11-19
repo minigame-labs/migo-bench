@@ -37,7 +37,11 @@
 # Usage:
 #   bench-matrix.sh --device SERIAL --migo-aar <spec>
 #                   [--games "bunnymark endless-runner canvasmark"]
-#                   [--rounds 3] [--duration 60] [--cold-runs 3]
+#                   [--rounds 3] [--duration 60] [--cold-runs 3] [--out DIR]
+#
+#   --out       where matrix.csv, results.csv and the logs go; defaults to out/.
+#               Both CSVs are appended to, so a session meant to stand alone gets a
+#               directory of its own rather than rows mixed into the last one's.
 #
 #   --migo-aar  local:PATH | release-tag:TAG | sha:SHA. Prefer a tag: a table
 #               anchored to a build nobody can download is not reproducible, and
@@ -45,7 +49,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUT="$DIR/../out"; mkdir -p "$OUT"
+OUT="$DIR/../out"
 
 SERIAL=""; MIGO_AAR=""
 GAMES="bunnymark endless-runner canvasmark"
@@ -57,8 +61,10 @@ while [[ $# -gt 0 ]]; do case "$1" in
   --rounds) ROUNDS="$2"; shift 2;;
   --duration) DUR="$2"; shift 2;;
   --cold-runs) COLD="$2"; shift 2;;
+  --out) OUT="$2"; shift 2;;
   *) echo "unknown arg: $1" >&2; exit 2;;
 esac; done
+mkdir -p "$OUT"
 
 [[ -n "$SERIAL" ]] || { echo "ERROR: --device required" >&2; exit 2; }
 [[ -n "$MIGO_AAR" ]] || { echo "ERROR: --migo-aar required (release-tag:vX.Y.Z for a publishable table)" >&2; exit 2; }
@@ -83,7 +89,7 @@ echo "[matrix] migo=$MIGO_AAR duration=${DUR}s cold-runs=$COLD"
 # row is dropped: it is the one run that carries the fresh-install penalty.
 echo "[matrix] priming: installing both shells and discarding one run each"
 for runtime in webview migo; do
-  prime=(--runtime "$runtime" --game "${GAMES%% *}" --device "$SERIAL" --duration 10 --cold-runs 1)
+  prime=(--runtime "$runtime" --game "${GAMES%% *}" --device "$SERIAL" --duration 10 --cold-runs 1 --out "$OUT")
   [[ "$runtime" == migo ]] && prime+=(--migo-aar "$MIGO_AAR")
   before="$(wc -l < "$OUT/results.csv")"
   if bash "$DIR/run.sh" "${prime[@]}" >"$OUT/matrix_prime_${runtime}.log" 2>&1; then
@@ -107,7 +113,7 @@ for (( round=1; round<=ROUNDS; round++ )); do
       case "$gate" in TIMEOUT*) echo "[matrix]   WARNING: this row is not temperature-gated";; esac
 
       args=(--runtime "$runtime" --game "$game" --device "$SERIAL"
-            --duration "$DUR" --cold-runs "$COLD")
+            --duration "$DUR" --cold-runs "$COLD" --out "$OUT")
       [[ "$runtime" == migo ]] && args+=(--migo-aar "$MIGO_AAR")
 
       before="$(wc -l < "$OUT/results.csv")"
