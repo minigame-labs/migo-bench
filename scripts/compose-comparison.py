@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Compose record-comparison.sh's two recordings into one side-by-side video with the measured numbers on it.
 
-    compose-comparison.py [--dir out/comparison] [--out out/comparison/comparison.mp4] [--title TEXT]
+    compose-comparison.py [--dir out/comparison] [--out out/comparison/comparison.mp4] [--title TEXT] [--note TEXT]
 
 Reads <dir>/{migo,webview}.{mp4,csv} and meta.txt. Each sample in the CSVs (second, fps, pss_kb) becomes a caption under
 its arm, shown from that second until the next sample, so the numbers on screen are the harness's own, at the time
 they were taken -- nothing is smoothed or invented between samples. A footer says how they were measured, because a
-number without its method is the kind of claim this repository exists not to make. Needs ffmpeg with libass.
+number without its method is the kind of claim this repository exists not to make; `--note` adds a line above it
+for what the numbers mean, when that has been measured too (MEASURING.md, "A side-by-side video"). Needs ffmpeg with
+libass.
 """
 import argparse
 import csv
@@ -51,6 +53,7 @@ def main():
     parser.add_argument("--dir", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent / "out" / "comparison")
     parser.add_argument("--out", type=pathlib.Path, default=None)
     parser.add_argument("--title", default="")
+    parser.add_argument("--note", default="", help="one more footer line, above the method: what the numbers mean")
     parser.add_argument("--font", default="Microsoft YaHei" if sys.platform == "win32" else "PingFang SC",
                         help="a font with CJK glyphs for the captions")
     args = parser.parse_args()
@@ -81,7 +84,14 @@ def main():
     footer = (f"drawtext=text='{first}':fontcolor=white@0.85:fontsize=16:x=(w-text_w)/2:y=h-52,"
               f"drawtext=text='{second}':fontcolor=white@0.85:fontsize=16:x=(w-text_w)/2:y=h-28,"
               f"drawtext=text='{title_text}':fontcolor=white:fontsize=28:x=(w-text_w)/2:y=12")
-    graph = ";".join(filters) + f";{''.join(labels)}hstack=inputs={len(labels)},pad=iw:ih+110:0:48:black,{footer}[v]"
+    extra = 0
+    if args.note:
+        # The note goes in drawtext's font, which needs CJK glyphs when the note has them: the captions' font is one.
+        extra = 30
+        footer += (f",drawtext=text='{escape(args.note)}':font='{args.font}':fontcolor=0x66D9FF:fontsize=18:"
+                   f"x=(w-text_w)/2:y=h-82")
+    graph = (";".join(filters) + f";{''.join(labels)}hstack=inputs={len(labels)},pad=iw:ih+{110 + extra}:0:48:black,"
+             f"{footer}[v]")
     cmd = ["ffmpeg", "-y", *inputs, "-filter_complex", graph, "-map", "[v]", "-c:v", "libx264", "-crf", "20",
            "-pix_fmt", "yuv420p", "-shortest", str(out.resolve())]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=d)

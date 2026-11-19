@@ -463,12 +463,14 @@ samples on them and the method written underneath. Everything on screen is a sam
 bash scripts/make-comparison-assets.sh hurdle-run-1.zip ../migo-web-adapter/dist/migo-web-adapter.bundle.js game-hurdle
 # rebuild and install both shells, then:
 bash scripts/record-comparison.sh --device <serial> --game-asset game-hurdle --seconds 30
-python3 scripts/compose-comparison.py --title "Hurdle Run (Egret 5.4.1)"    # needs ffmpeg with libass
+python3 scripts/compose-comparison.py --title "Hurdle Run (Egret 5.4.1)" \
+    --note "game logic runs 60/s on both; the WebView shows 42"   # needs ffmpeg with libass
 ```
 
-A video is one game on one device. On 2026-11-19 the demo catalog's Egret game (Hurdle Run) ran at 59-61 fps and
-125-135 MB on Migo and at 41-45 fps and 186-200 MB on the WebView of a Mate 30 Pro, the WebView's frame rate the same
-with no recording running. That frame rate is this game's on this WebView, not a property of JavaScript on either:
+A video is one game on one device. On 2026-11-19 the demo catalog's Egret game (Hurdle Run) ran at 60-61 fps and
+128-131 MB on Migo and at 41-44 fps and 208-214 MB on the WebView of a Mate 30 Pro (re-recorded once the shell's
+hardware layer, §7, was gone; the first recording that morning carried it), the WebView's frame rate the same with no
+recording running. That frame rate is this game's on this WebView, not a property of JavaScript on either:
 the steady-state tables, which hold the frame rate tied, are what a general claim rests on.
 
 What the WebView's 42 is made of was measured the same day, and it is not script. Hooked into the game's own
